@@ -41,12 +41,15 @@
 
   "vars": {
     "APP_NAME": "OpenTrust CV Studio",
-    "RETENTION_DAYS": "90"
+    "RETENTION_DAYS": "90",
+    "SMTP_HOST": "smtppro.zoho.eu",
+    "SMTP_PORT": "587",
+    "SMTP_SECURITY": "starttls"
   }
 
   // No hay autenticación interna.
   // La protección de producción se realizará mediante Cloudflare Access.
   //
-  // Los secretos SMTP, si se usan durante desarrollo local,
-  // deben mantenerse exclusivamente en .dev.vars y nunca en Git.
+  // Los secretos SMTP se configuran como secrets del Worker y nunca
+  // se versionan en GitHub.
 }
