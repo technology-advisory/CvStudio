@@ -1,0 +1,23 @@
+{
+  "name": "opentrust-cv-studio",
+  "version": "0.4.1",
+  "private": true,
+  "type": "module",
+  "description": "Portal privado de OpenTrust Group protegido mediante Cloudflare Access para gestionar y enviar enlaces temporales de acceso al CV.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:worker": "wrangler dev --local --port 10060",
+    "dev:mail": "node scripts/smtp-relay.mjs",
+    "db:init": "wrangler d1 migrations apply cv_portal_db --local",
+    "setup": "npm run db:init",
+    "test": "node --test",
+    "check": "node --check src/worker.js && node --check src/mail-service.js && node --check js/dashboard.js && node --check js/cv-editor.js && node --check scripts/smtp-relay.mjs && node --check scripts/pdf-renderer.mjs && node --check scripts/dev.mjs",
+    "audit": "npm audit"
+  },
+  "dependencies": {
+    "nodemailer": "^7.0.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.82.1"
+  }
+}

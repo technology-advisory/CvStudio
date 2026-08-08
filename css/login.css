@@ -1,0 +1,24 @@
+:root{--navy:#071526;--navy2:#0b2035;--teal:#0d7188;--bg:#f4f7f9;--text:#102033;--muted:#647384;--line:#dce5ea}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 20% 20%,#0d7188 0%,transparent 45%),linear-gradient(180deg,var(--navy),var(--navy2));display:grid;place-items:center;padding:24px}
+.login-shell{width:100%;max-width:420px}
+.login-card{background:#fff;border-radius:20px;padding:34px 32px;box-shadow:0 30px 80px rgba(4,20,34,.35)}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:22px}
+.brand-mark{width:44px;height:44px;border:1px solid #0d7188;border-radius:12px;display:grid;place-items:center;color:#0d7188;font-weight:800;background:#eef8fa}
+.brand strong{display:block;color:var(--navy)}
+.brand small{display:block;font-size:.67rem;letter-spacing:.16em;color:#78909c;margin-top:3px}
+h1{font-size:1.35rem;margin:0 0 6px;color:var(--text)}
+.hint{color:var(--muted);font-size:.9rem;line-height:1.5;margin:0 0 22px}
+.field{display:block;font-size:.82rem;font-weight:700;letter-spacing:.03em;color:#334a5a;margin-bottom:16px}
+.field input{width:100%;margin-top:7px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:1rem}
+.field input:focus{outline:3px solid #0d71881a;border-color:var(--teal)}
+button.primary{width:100%;padding:13px;border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer}
+button.primary:hover{background:#0a5f73}
+button.primary:disabled{opacity:.6;cursor:progress}
+.error{margin:14px 0 0;padding:10px 12px;background:#fdecec;color:#b14343;border-radius:9px;font-size:.85rem}
+.hidden{display:none}
+
+.eyebrow{margin:0 0 8px;font-size:.7rem;font-weight:800;letter-spacing:.16em;color:var(--teal)}
+.access-button{display:block;text-align:center;text-decoration:none;width:100%;padding:13px;border-radius:10px;background:var(--teal);color:#fff;font-weight:700;font-size:.95rem;transition:transform .16s ease,background .16s ease,box-shadow .16s ease}
+.access-button:hover{background:#0a5f73;transform:translateY(-1px);box-shadow:0 8px 22px rgba(13,113,136,.2)}
+.access-note{margin:16px 0 0;text-align:center;color:#83929e;font-size:.75rem;line-height:1.45}

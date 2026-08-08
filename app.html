@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>OpenTrust CV Studio</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/cv-editor.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/app.html" aria-label="OpenTrust CV Studio">
+      <span class="brand-mark">OT</span>
+      <span><strong>OpenTrust Group</strong><small>CV STUDIO</small></span>
+    </a>
+    <nav aria-label="Navegación principal">
+      <a class="active" href="#new-send" data-view="new-send">Nuevo envío</a>
+      <a href="#links" data-view="links">Enlaces</a>
+      <a href="#statistics" data-view="statistics">Estadísticas</a>
+      <a href="#document" data-view="document">Documento</a>
+      <a href="#cv-editor" data-view="cv-editor">Editor del CV</a>
+    </nav>
+    <a class="logout-btn" href="/">Volver al acceso</a>
+    <div class="privacy-note"><strong>Trazabilidad controlada</strong><span>Se registran destinatario, versión enviada y datos técnicos de cada descarga para el seguimiento de los accesos.</span></div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div><p class="eyebrow">VIDA PROFESIONAL COMPLETA</p><h1 id="view-title">Nuevo envío</h1><p id="view-subtitle">Genera un acceso temporal y envíalo con una presentación profesional.</p></div>
+      <span class="environment">LOCAL</span>
+    </header>
+
+    <section id="view-new-send" class="app-view active" data-view-panel="new-send">
+      <article class="panel accent-panel send-panel">
+        <div class="panel-heading"><div><p class="eyebrow">NUEVO ENVÍO</p><h2>Enviar vida profesional</h2></div><span class="secure-badge">Enlace aleatorio</span></div>
+        <form id="link-form">
+          <div class="mail-grid">
+            <label class="field">Dirección de envío<input id="recipient-email" type="email" autocomplete="email" placeholder="recruiter@empresa.com" required></label>
+            <label class="field">Nombre del destinatario <small>Opcional</small><input id="recipient-name" type="text" maxlength="80" placeholder="Nombre"></label>
+          </div>
+
+          <fieldset class="template-options">
+            <legend>Plantilla del mensaje</legend>
+            <label><input type="radio" name="mail-template" value="selection" checked><span><strong>Proceso de selección</strong><small>Directa, profesional y orientada a recruiters.</small></span></label>
+            <label><input type="radio" name="mail-template" value="executive"><span><strong>Perfil ejecutivo</strong><small>Más sénior y centrada en gobierno y liderazgo.</small></span></label>
+          </fieldset>
+
+          <label class="field">Asunto<input id="mail-subject" type="text" maxlength="160" required></label>
+          <label class="field">Mensaje<textarea id="mail-message" maxlength="3000" rows="10" required></textarea></label>
+
+          <fieldset class="expiry-options">
+            <legend>Caducidad del enlace</legend>
+            <label><input type="radio" name="expiry" value="30" checked><span>30 min</span></label>
+            <label><input type="radio" name="expiry" value="60"><span>1 hora</span></label>
+            <label><input type="radio" name="expiry" value="1440"><span>24 horas</span></label>
+            <label><input type="radio" name="expiry" value="custom"><span>Personalizada</span></label>
+          </fieldset>
+          <label class="field custom-date hidden" id="custom-date-wrap">Fecha y hora de caducidad<input type="datetime-local" id="custom-date"></label>
+          <label class="switch-row"><span><strong>Una única descarga</strong><small>El enlace se invalida después de descargar el PDF.</small></span><input type="checkbox" id="single-use" checked></label>
+          <label class="field hidden" id="downloads-wrap">Descargas permitidas<input id="max-downloads" type="number" min="1" max="20" value="5"></label>
+          <div class="send-actions"><button class="secondary" id="preview-mail" type="button">Vista previa del correo</button><button class="primary" type="submit">Generar enlace y enviar</button></div>
+        </form>
+        <div id="generated" class="generated hidden" aria-live="polite">
+          <span>Correo enviado y enlace generado</span><div class="url-row"><input id="generated-url" readonly><button id="copy-generated" class="icon-btn" type="button">Copiar</button><a id="open-generated" class="icon-btn" target="_blank" rel="noopener">Abrir</a></div>
+          <small id="generated-expiry"></small>
+        </div>
+      </article>
+    </section>
+
+    <section id="view-links" class="app-view" data-view-panel="links">
+      <section class="stats" aria-label="Resumen de enlaces">
+        <article><span>Activos</span><strong id="stat-active">0</strong></article>
+        <article><span>Utilizados</span><strong id="stat-used">0</strong></article>
+        <article><span>Caducados</span><strong id="stat-expired">0</strong></article>
+        <article><span>Revocados</span><strong id="stat-revoked">0</strong></article>
+      </section>
+      <article class="panel links-panel">
+        <div class="panel-heading"><div><p class="eyebrow">CONTROL DE ACCESOS</p><h2>Enlaces generados</h2></div><button id="refresh" class="secondary" type="button">Actualizar</button></div>
+        <div class="filters" role="tablist"><button class="active" data-filter="ALL">Todos</button><button data-filter="ACTIVE">Activos</button><button data-filter="USED">Utilizados</button><button data-filter="EXPIRED">Caducados</button><button data-filter="REVOKED">Revocados</button></div>
+        <div class="links-toolbar">
+          <div class="bulk-actions">
+            <label class="select-all"><input id="select-all-links" type="checkbox"> <span>Seleccionar todo lo visible</span></label>
+            <button id="delete-selected-links" class="danger" type="button" disabled>Eliminar seleccionados</button>
+            <button id="revoke-all-active" class="secondary" type="button">Revocar todos los activos</button>
+          </div>
+          <div class="retention-actions">
+            <label for="link-retention-days">Limpieza por antigüedad</label>
+            <select id="link-retention-days">
+              <option value="7">7 días</option>
+              <option value="30" selected>30 días</option>
+              <option value="90">90 días</option>
+              <option value="180">180 días</option>
+              <option value="365">1 año</option>
+            </select>
+            <button id="purge-old-links" class="secondary" type="button">Eliminar antiguos</button>
+          </div>
+        </div>
+        <p class="retention-note">La limpieza por antigüedad elimina cualquier enlace cuya fecha de creación supere el plazo seleccionado, incluidos los activos. Usa “Revocar todos los activos” si solo quieres invalidarlos sin borrarlos.</p>
+        <div class="table-wrap"><table><thead><tr><th class="check-column"></th><th>Token</th><th>Creado</th><th>Caduca</th><th>Uso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="links-body"><tr><td colspan="7" class="empty">Cargando enlaces…</td></tr></tbody></table></div>
+      </article>
+    </section>
+
+
+    <section id="view-statistics" class="app-view" data-view-panel="statistics">
+      <section class="stats" aria-label="Resumen estadístico">
+        <article><span>Correos enviados</span><strong id="stat-total-sent">0</strong></article>
+        <article><span>Descargas</span><strong id="stat-total-downloads">0</strong></article>
+        <article><span>Enlaces activos</span><strong id="stat-active-statistics">0</strong></article>
+        <article><span>Enlaces totales</span><strong id="stat-total-links">0</strong></article>
+      </section>
+
+      <article class="panel statistics-panel">
+        <div class="panel-heading"><div><p class="eyebrow">HISTORIAL DE ENVÍOS</p><h2>Envíos realizados</h2><p class="panel-description">Destinatario, versión del PDF, fecha de envío, caducidad y uso del enlace.</p></div><button id="refresh-statistics" class="secondary" type="button">Actualizar</button></div>
+        <div class="table-wrap"><table class="statistics-table"><thead><tr><th>Destinatario</th><th>Documento</th><th>Enviado</th><th>Caduca</th><th>Descargas</th><th>Estado</th></tr></thead><tbody id="statistics-sends-body"><tr><td colspan="6" class="empty">Cargando envíos…</td></tr></tbody></table></div>
+      </article>
+
+      <article class="panel statistics-panel">
+        <div class="panel-heading"><div><p class="eyebrow">TRAZABILIDAD DE DESCARGAS</p><h2>Descargas registradas</h2><p class="panel-description">Fecha y hora, IP, ubicación aproximada, destinatario asociado, versión y navegador.</p></div></div>
+        <div class="privacy-warning"><strong>Información personal y técnica</strong><span>La IP y el navegador se registran únicamente cuando la descarga se completa. Define una política de conservación antes de publicar el portal.</span></div>
+        <div class="table-wrap"><table class="statistics-table downloads-table"><thead><tr><th>Fecha y hora</th><th>IP / ubicación</th><th>Destinatario</th><th>Documento</th><th>Navegador</th></tr></thead><tbody id="statistics-downloads-body"><tr><td colspan="5" class="empty">Cargando descargas…</td></tr></tbody></table></div>
+      </article>
+    </section>
+
+    <section id="view-document" class="app-view" data-view-panel="document">
+      <article class="panel cv-panel document-panel">
+        <div class="panel-heading"><div><p class="eyebrow">DOCUMENTO PRIMARIO</p><h2>Vida profesional completa</h2></div><span id="cv-status" class="status waiting">Comprobando</span></div>
+        <div class="document-card">
+          <div class="pdf-icon">PDF</div>
+          <div><strong id="cv-name">Sin documento</strong><span id="cv-version">—</span><small id="cv-meta">—</small></div>
+        </div>
+        <div class="button-row single"><a class="secondary disabled" id="download-cv">Descargar PDF</a></div>
+        <details>
+          <summary>Subir un PDF nuevo</summary>
+          <form id="cv-form" class="upload-form">
+            <label class="field">Versión<input id="cv-version-input" name="version" placeholder="Ej. agosto 2026" required></label>
+            <label class="drop-zone" id="drop-zone"><input type="file" id="cv-file" name="file" accept="application/pdf,.pdf" required><strong>Seleccionar PDF</strong><span>Máximo 15 MB</span></label>
+            <label class="switch-row"><span><strong>Poner como primario al subir</strong><small>Será el PDF utilizado en los nuevos envíos. El primario anterior pasará automáticamente a Backup.</small></span><input type="checkbox" id="cv-activate-on-upload" checked></label>
+            <button class="secondary" type="submit">Guardar en el historial</button>
+          </form>
+        </details>
+      </article>
+
+      <article class="panel cv-panel versions-panel">
+        <div class="panel-heading"><div><p class="eyebrow">HISTORIAL</p><h2>Versiones subidas</h2><p class="panel-description">El documento Primario es el que se utiliza en los nuevos envíos. Al elegir otro como Primario, el anterior pasa a Backup automáticamente y conserva su histórico.</p></div><button id="refresh-versions" class="secondary" type="button">Actualizar</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Documento</th><th>Versión</th><th>Tamaño</th><th>Subido</th><th>Estado</th><th></th></tr></thead><tbody id="cv-versions-body"><tr><td colspan="6" class="empty">Cargando versiones…</td></tr></tbody></table></div>
+      </article>
+
+    </section>
+
+
+    <section id="view-cv-editor" class="app-view" data-view-panel="cv-editor">
+      <article class="panel cv-editor-panel">
+        <div class="panel-heading editor-main-heading">
+          <div>
+            <p class="eyebrow">CONTENIDO ESTRUCTURADO</p>
+            <h2>Editor del CV</h2>
+            <p class="panel-description">Edita el contenido por campos. La maquetación la aplica el servidor, así que no puede romperse desde aquí.</p>
+          </div>
+          <span id="cv-page-count" class="page-badge">—</span>
+        </div>
+
+        <div class="editor-command-bar">
+          <div class="editor-status-group">
+            <span class="edit-live-dot"></span>
+            <div><strong>Borrador en servidor</strong><small id="cv-editor-status">Cargando…</small></div>
+          </div>
+          <div class="editor-command-actions">
+            <button id="cv-bold" class="secondary" type="button" title="Poner en negrita el texto seleccionado"><b>B</b></button>
+            <button id="cv-expand-all" class="secondary" type="button">Desplegar</button>
+            <button id="cv-collapse-all" class="secondary" type="button">Plegar</button>
+            <button id="cv-reset" class="secondary" type="button">Restaurar original</button>
+            <button id="cv-export" class="secondary" type="button">Exportar PDF</button>
+            <button id="cv-save" class="secondary" type="button">Guardar borrador</button>
+            <button id="cv-publish" class="secondary" type="button">Guardar versión con nombre</button>
+            <button id="cv-publish-document" class="primary" type="button">Publicar en Documento</button>
+          </div>
+        </div>
+
+        <div class="editor-guidance">
+          <strong>Formato</strong>
+          <span>Escribe **así** para poner una palabra en negrita, o selecciona el texto y pulsa <b>B</b>. También puedes hacer clic directamente sobre cualquier texto de la vista previa (a la derecha) y editarlo ahí mismo — al salir del campo, el panel de la izquierda se actualiza solo. Solo el contacto de la cabecera no es editable desde la vista previa; usa el panel para eso. El borrador se guarda solo cada pocos segundos. «Guardar versión con nombre» deja un punto en el historial de contenido. «Publicar en Documento» guarda la versión del contenido y te lleva al módulo Documento para gestionarla. «Exportar PDF» es la única acción que abre la ventana de impresión.</span>
+        </div>
+
+        <div class="cv-workspace">
+          <div id="cv-content-form" class="cv-content-form"></div>
+          <div class="cv-live-shell">
+            <div class="cv-live-toolbar"><strong>Vista previa A4</strong><small id="cv-inline-status">Edición inline: cargando…</small></div>
+            <iframe id="cv-live-preview" title="Vista previa del CV"></iframe>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+  <dialog id="mail-preview" class="mail-preview"><div class="preview-toolbar"><strong>Vista previa del correo</strong><button id="close-preview" class="icon-btn" type="button">Cerrar</button></div><iframe id="mail-preview-frame" title="Vista previa del correo"></iframe></dialog>
+  <dialog id="cv-preview" class="cv-preview-dialog"><div class="preview-toolbar"><strong id="cv-preview-title">Vista previa del documento</strong><button id="close-cv-preview" class="icon-btn" type="button">Cerrar</button></div><iframe id="cv-preview-frame" title="Vista previa del PDF"></iframe></dialog>
+  <div id="toast" class="toast" role="status"></div>
+  <script type="module" src="/js/dashboard.js"></script>
+</body>
+</html>

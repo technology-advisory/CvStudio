@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "opentrust-cv-studio",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-08-06",
+  "dev": {
+    "port": 10060
+  },
+  "assets": {
+    "directory": ".dev-static",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cv_portal_db",
+      "database_id": "local-cv-portal-db",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CV_BUCKET",
+      "bucket_name": "opentrust-cv-private"
+    }
+  ],
+  // Purga diaria de IP/ubicación/navegador de download_events (ver RETENTION_DAYS).
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
+  "vars": {
+    "APP_NAME": "OpenTrust CV Studio",
+    "LOCAL_MODE": "true",
+    "SESSION_TTL_HOURS": "8",
+    "AUTH_DISABLED": "false",
+    "RETENTION_DAYS": "90"
+  }
+  // Secretos (ADMIN_PASSWORD, SESSION_SECRET, SMTP_*) van en .dev.vars para
+  // desarrollo local y con `wrangler secret put <NOMBRE>` en producción —
+  // nunca en este archivo, que sí se versiona.
+}

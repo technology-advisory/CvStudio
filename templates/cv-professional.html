@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+@page {
+  size: A4;
+  margin: 14mm 14mm 16mm 14mm;
+  @bottom-left {
+    content: "Miguel Ángel Carriazo Álvarez · Currículum";
+    font-family: Carlito, sans-serif; font-size: 7.2pt; color: #94a3b8;
+  }
+  @bottom-right {
+    content: "opentrust.group · " counter(page) "/" counter(pages);
+    font-family: Carlito, sans-serif; font-size: 7.2pt; color: #94a3b8;
+  }
+}
+* { box-sizing: border-box; }
+body { font-family: Carlito, "DejaVu Sans", sans-serif; font-size: 9.1pt; line-height: 1.34; color: #1f2937; margin: 0; }
+
+.brandbar { font-size: 7.2pt; letter-spacing: .16em; text-transform: uppercase; color: #0f766e; font-weight: 700; margin-bottom: 5px; }
+.brandbar span { color: #94a3b8; font-weight: 600; }
+.head { border-bottom: 2.2pt solid #0f766e; padding-bottom: 9px; margin-bottom: 10px; }
+h1 { font-size: 24pt; line-height: 1.05; margin: 0 0 2px 0; font-weight: 700; letter-spacing: -.015em; color: #0f172a; }
+.role { font-size: 11pt; color: #0f766e; font-weight: 700; margin-bottom: 5px; }
+.contact { font-size: 8.4pt; color: #475569; }
+.contact b { color: #0f172a; font-weight: 600; }
+.sep { color: #cbd5e1; padding: 0 5px; }
+
+.claim { border-left: 2.5pt solid #0f766e; background: #f0fdfa; padding: 5px 9px; margin-bottom: 9px; font-size: 8.6pt; color: #0f172a; font-weight: 600; }
+.summary p { font-size: 8.9pt; color: #334155; text-align: justify; margin: 0 0 4px 0; }
+.focus { margin: 4px 0 4px 0; }
+.focus .t { font-size: 8.6pt; font-weight: 700; color: #0f172a; }
+
+h2 { font-size: 9.4pt; text-transform: uppercase; letter-spacing: .12em; color: #0f172a; font-weight: 700; margin: 0 0 8px 0; padding-bottom: 3px; border-bottom: .8pt solid #e2e8f0; }
+h2 .num { color: #0f766e; margin-right: 7px; font-weight: 700; }
+section { margin-bottom: 11px; }
+h3 { font-size: 8.8pt; font-weight: 700; color: #0f172a; margin: 7px 0 2px 0; }
+
+.job { margin-bottom: 10px; }
+.job-head { margin-bottom: 2px; }
+.company { font-size: 10.2pt; font-weight: 700; color: #0f172a; }
+.dates { float: right; font-size: 8pt; color: #0f766e; font-weight: 700; white-space: nowrap; }
+.jobtitle { font-size: 9.2pt; font-weight: 700; color: #334155; }
+.meta { font-size: 7.9pt; color: #64748b; font-style: italic; margin-bottom: 3px; }
+.intro { font-size: 8.6pt; color: #334155; text-align: justify; margin-bottom: 3px; }
+.tag { display: inline-block; font-size: 7.2pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #0f766e; background: #f0fdfa; border: .6pt solid #99f6e4; border-radius: 8px; padding: 1px 7px; margin-top: 3px; }
+.subrole { font-size: 8.7pt; font-weight: 700; color: #0f766e; margin: 6px 0 1px 0; }
+
+ul { margin: 2px 0 0 0; padding-left: 12px; }
+li { margin-bottom: 1.2px; }
+li::marker { color: #0f766e; }
+ul.sub { margin-top: 1px; padding-left: 13px; }
+ul.sub li { font-size: 8pt; color: #475569; margin-bottom: 0; }
+ul.sub li::marker { color: #cbd5e1; }
+b { color: #0f172a; }
+
+table.lay { width: 100%; border-collapse: separate; border-spacing: 0; }
+table.lay td { vertical-align: top; padding: 0 10px 6px 0; }
+
+.certcol .t { font-size: 7.6pt; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: #0f766e; margin-bottom: 2px; }
+.certcol ul { padding-left: 11px; margin-top: 1px; }
+.certcol li { font-size: 8.3pt; color: #334155; }
+
+.proj .n { font-size: 8.7pt; font-weight: 700; color: #0f172a; }
+.proj .u { font-size: 7.4pt; color: #0f766e; font-weight: 600; word-wrap: break-word; }
+.proj .d { font-size: 7.9pt; color: #64748b; line-height: 1.26; }
+
+.skill .t { font-size: 8.6pt; font-weight: 700; color: #0f172a; margin-top: 5px; }
+.foot { margin-top: 8px; border-top: 2.2pt solid #0f766e; padding-top: 5px; font-size: 7.6pt; color: #64748b; text-align: center; letter-spacing: .05em; }
+.foot b { color: #0f766e; letter-spacing: .14em; }
+.clear { clear: both; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="brandbar">OpenTrust Group <span>· Confianza digital · Arquitectura · Infraestructura · Ciberseguridad · GRC</span></div>
+  <h1 id="cv-preview-name">Miguel Ángel Carriazo Álvarez</h1>
+  <div class="role" id="cv-preview-role">Arquitecto de Infraestructura y Ciberseguridad</div>
+  <div class="contact">
+    <b id="cv-preview-email">macarriazo@opentrust.group</b><span class="sep">|</span><span id="cv-preview-location">Madrid, España</span><span class="sep">|</span><span id="cv-preview-linkedin">linkedin.com/in/macarriazo</span><span class="sep">|</span><span id="cv-preview-web">opentrust.group</span>
+  </div>
+</div>
+
+<div class="claim" id="cv-preview-claim">
+  Especialista en marcos regulatorios y de cumplimiento (ENS · ISO 27001 · ISO 42001 · ISO 22301 · NIS2 · GDPR)<br>
+  Resiliencia · Security by Design · Entornos Híbridos y Multicloud
+</div>
+
+<div class="summary">
+  <p id="cv-preview-summary-1">Arquitecto de Infraestructura y Ciberseguridad con más de 25 años de experiencia en el diseño, gobierno y evolución de entornos tecnológicos críticos, híbridos y cloud, combinando dirección de equipos técnicos con responsabilidad individual como referente único de ciberseguridad en entornos de alta exigencia.</p>
+  <p id="cv-preview-summary-2">Especializado en arquitectura resiliente, Security by Design y modelos de gobierno alineados con ENS, ISO 27001, NIS2, ISO/IEC 22301 (continuidad de negocio) e ISO/IEC 42001 (gestión de inteligencia artificial).</p>
+  <p id="cv-preview-summary-3">Perfil híbrido técnico–estratégico, con experiencia liderando operaciones IT, definiendo arquitecturas complejas y asegurando cumplimiento normativo en organizaciones de alta exigencia.</p>
+  <p id="cv-preview-summary-4">Especialización transversal en marcos regulatorios de ciberseguridad y continuidad (ENS, ISO 27001, NIS2, ISO 22301, ISO 42001, GDPR), aplicados tanto desde el gobierno y la auditoría como desde el diseño de arquitectura técnica.</p>
+</div>
+
+<div class="focus">
+  <div class="t">Foco en:</div>
+  <table class="lay"><tr>
+    <td width="50%"><ul>
+      <li id="cv-preview-focus-1">Resiliencia operativa y continuidad de negocio (BCP/DRP)</li>
+      <li id="cv-preview-focus-2">Gobierno de la ciberseguridad y gestión del riesgo</li>
+    </ul></td>
+    <td width="50%"><ul>
+      <li id="cv-preview-focus-3">Arquitecturas híbridas y multicloud seguras</li>
+      <li id="cv-preview-focus-4">Integración de IA bajo modelos de control y cumplimiento</li>
+    </ul></td>
+  </tr></table>
+</div>
+<div class="summary"><p id="cv-preview-closing">Capacidad demostrada para alinear tecnología, seguridad y negocio.</p></div>
+
+<section>
+  <h2><span class="num">01</span>Experiencia profesional</h2>
+
+  <div class="job">
+    <div class="job-head">
+      <span class="dates">mayo 2026 — junio 2026</span>
+      <span class="company">Experis (ManpowerGroup), S.L.U.</span> <span class="sep">|</span> <span class="jobtitle">Madrid, España</span>
+      <div class="clear"></div>
+    </div>
+    <div class="subrole">Arquitecto de Soluciones de Infraestructura y Ciberseguridad · Proyectos para IBM (Banca regulada)</div>
+    <div class="intro">Participación, a través de IBM, en un proyecto estratégico de arquitectura de seguridad para Banca Regulada, contribuyendo al diseño, evaluación e implantación de soluciones de ciberseguridad en un entorno bancario altamente regulado.</div>
+    <div class="meta">Responsabilidades principales:</div>
+    <ul>
+      <li>Diseño de arquitecturas de seguridad para entornos cloud, on-premise e híbridos.</li>
+      <li>Definición y revisión de diseños de arquitectura de alto nivel (HLD – High Level Design) y bajo nivel (LLD – Low Level Design), garantizando su alineación con los requisitos funcionales y de seguridad.</li>
+      <li>Modelado de arquitecturas mediante C4 Model (Context, Container, Component y Deployment).</li>
+      <li>Análisis y validación técnica de soluciones desde la perspectiva de la ciberseguridad.</li>
+      <li>Definición de controles de seguridad y apoyo en la gestión de riesgos tecnológicos.</li>
+      <li>Colaboración con equipos de Arquitectura, Infraestructura, Desarrollo, Riesgo, Compliance y Negocio.</li>
+      <li>Coordinación con proveedores tecnológicos y seguimiento de la implantación de las soluciones.</li>
+      <li>Participación en comités de arquitectura y seguridad para la evaluación y aprobación de iniciativas.</li>
+      <li>Acompañamiento de las iniciativas durante todo su ciclo de vida, desde el diseño hasta la puesta en producción.</li>
+    </ul>
+    <span class="tag">Proyecto finalizado</span>
+  </div>
+
+  <div class="job">
+    <div class="job-head">
+      <span class="dates">marzo 2002 — diciembre 2025</span>
+      <span class="company">Grupo Lefebvre – El Derecho</span> <span class="sep">|</span> <span class="jobtitle">Madrid, España</span>
+      <div class="clear"></div>
+    </div>
+    <div class="meta">Continuidad por sucesión empresarial dentro del mismo grupo: El Derecho Editores → Grupo Editorial Quantor → Corporación Empresarial El Derecho → Grupo Editorial El Derecho → Lefebvre-El Derecho, S.A.</div>
+
+    <div class="job-head" style="margin-top:5px">
+      <span class="dates">2023 — 2025</span>
+      <span class="jobtitle">Infrastructure Architect &amp; Security Manager</span>
+      <div class="clear"></div>
+    </div>
+    <ul>
+      <li>Gobierno de la arquitectura tecnológica corporativa y definición de la estrategia global de ciberseguridad, alineada con los objetivos de negocio y regulatorios.</li>
+      <li>Diseño y validación de modelos de arquitectura híbrida (on-premises / cloud) e integración transversal de <b>Security by Design</b> en infraestructura, plataformas y desarrollo, asegurando resiliencia, seguridad y escalabilidad.</li>
+      <li>Supervisión y control del cumplimiento de ENS, ISO 27001, NIS2, GDPR e ISO/IEC 42001, actuando como referente técnico ante auditorías técnicas, regulatorias y financieras.</li>
+      <li>Gobierno y validación de la arquitectura de red corporativa (segmentación, microsegmentación, routing, firewalls y accesos seguros) y de las capacidades de detección y respuesta (<b>EDR, SIEM</b>, gestión de vulnerabilidades).</li>
+      <li>Responsable único de ciberseguridad, ejerciendo de referente técnico para proveedores y fabricantes estratégicos (NTT, Telefónica, IBM, Microsoft) y para otros departamentos técnicos, y coordinando al SOC de la matriz (Lefebvre, Francia) con Lefebvre España.</li>
+      <li>Validación técnica y de seguridad de proyectos críticos antes de producción, y definición de procedimientos técnicos y de respuesta a incidentes.</li>
+      <li>Interlocución directa con CIO y dirección en decisiones estratégicas de arquitectura, riesgo e infraestructura.</li>
+    </ul>
+
+    <div class="job-head" style="margin-top:6px">
+      <span class="dates">2002 — 2023</span>
+      <span class="jobtitle">IT Operations Manager &amp; Security</span>
+      <div class="clear"></div>
+    </div>
+    <ul>
+      <li>Dirección de un equipo de un mínimo de 10 personas en el área de IT Operations, con responsabilidad sobre disponibilidad, rendimiento, seguridad y continuidad del servicio, liderando infraestructuras críticas y asegurando SLAs y soporte al negocio.</li>
+      <li>Gobierno de la operación diaria y coordinación de equipos y proveedores tecnológicos; implantación de procesos ITSM (incidentes, problemas y cambios) y responsable de <b>Change Management</b> en infraestructura y seguridad.</li>
+      <li>Gestión de incidentes críticos (<b>Major Incidents</b>) y análisis RCA, y diseño y evolución de la arquitectura tecnológica corporativa.</li>
+      <li>Administración avanzada de entornos Microsoft (Windows Server, Active Directory, Azure), gestión de virtualización y alta disponibilidad, y administración de bases de datos (SQL Server y MySQL) en entornos críticos.</li>
+      <li>Responsabilidad sobre la red corporativa (VLANs, routing, firewalls, accesos) y diseño y ejecución de planes de continuidad (<b>BCP/DRP</b>).</li>
+      <li>Liderazgo de la migración a Office 365 y consolidación del Active Directory europeo (transformación digital del puesto de trabajo).</li>
+    </ul>
+  </div>
+
+  <div class="job">
+    <div class="job-head">
+      <span class="dates">1999 — 2001</span>
+      <span class="company">Leader Line, S.A.</span> <span class="sep">|</span> <span class="jobtitle">Administrador de Sistemas / Técnico de Infraestructura · Madrid, España</span>
+      <div class="clear"></div>
+    </div>
+    <div class="meta">Servicios prestados para IECISA – Informática El Corte Inglés.</div>
+    <ul>
+      <li>Administración de sistemas UNIX y Windows NT en entornos corporativos.</li>
+      <li>Soporte a plataformas de correo y servicios críticos.</li>
+      <li>Participación activa en proyectos de migración tecnológica entre entornos UNIX y Windows NT.</li>
+      <li>Gestión de comunicaciones entre delegaciones y servicios centrales.</li>
+      <li>Elaboración de documentación técnica y procedimientos operativos.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>Logros destacados</h2>
+  <ul>
+    <li>Diseño, evolución y gobierno integral de la infraestructura corporativa desde 2002, garantizando alta disponibilidad, seguridad y escalabilidad del negocio.</li>
+    <li>Implementación y operación de clústeres <b>Hyper-V</b> multinodo en alta disponibilidad, soportando cargas críticas de producción.</li>
+    <li>Diseño e implementación de clúster <b>VMware</b> en el datacenter de NTT, dando soporte a servicios críticos de cliente.</li>
+    <li>Diseño e implantación de arquitecturas <b>HA/DR</b> para SQL Server y MySQL, asegurando continuidad de servicio y resiliencia operativa.</li>
+    <li>Definición e implantación de la plataforma de backup y recuperación ante desastres con <b>Veeam Backup &amp; Replication</b>, incluyendo estrategias avanzadas de DR.</li>
+    <li>Optimización y gobierno del almacenamiento <b>Dell Unity</b>, mejorando rendimiento y eficiencia operativa.</li>
+    <li>Ejecución de migraciones complejas de datacenter, con impacto mínimo en el negocio y sin interrupciones relevantes del servicio.</li>
+    <li>Diseño e implementación de estrategias de recuperación ante desastres multi-datacenter, alineadas con planes de continuidad (<b>BCP/DRP</b>).</li>
+    <li>Definición e implantación de políticas corporativas de cifrado y protección de endpoints mediante <b>BitLocker</b>, alineadas con ENS e ISO 27001.</li>
+    <li>Implantación de cifrado en tránsito, en reposo y en memoria para credenciales corporativas a nivel de aplicación, en cumplimiento del Esquema Nacional de Seguridad (ENS).</li>
+    <li>Obtención, auditoría y mantenimiento de <b>ISO 27001</b> y <b>ENS (categoría media)</b> como responsable directo de la seguridad.</li>
+    <li>Diseño e implantación de arquitectura de <b>balanceo de carga corporativo</b> con <b>WAF por aplicación</b>, protegiendo servicios críticos y mejorando la seguridad y disponibilidad.</li>
+    <li>Administración, hardening y operación de sistemas Linux y Windows Server en entornos críticos.</li>
+    <li>Coordinación técnica con proveedores de hosting en el diseño y despliegue de plataformas de acceso de clientes.</li>
+    <li>Planificación y ejecución de migraciones completas entre proveedores de hosting, garantizando continuidad de servicio e integridad de datos.</li>
+    <li>Liderazgo del equipo de Operaciones IT y Seguridad, manteniendo un alto nivel de madurez tecnológica y de ciberseguridad.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">03</span>Competencias técnicas</h2>
+
+  <h3>Arquitectura &amp; Infraestructura</h3>
+  <ul>
+    <li>Arquitectura de soluciones para cliente: documentación de diseño de alto y bajo nivel (<b>HLD/LLD</b>), definición de arquitecturas de infraestructura y ciberseguridad, y evaluación de cumplimiento normativo en proyectos de transformación tecnológica.</li>
+    <li>Diseño y gobierno de infraestructuras corporativas críticas, orientadas a alta disponibilidad, resiliencia y continuidad de negocio.</li>
+    <li>Entornos Microsoft Enterprise: Windows Server, Active Directory (DNS, DHCP), con hardening y modelos de seguridad avanzados.</li>
+    <li>Virtualización y alta disponibilidad: <b>Hyper-V</b>, Failover Clustering y VMware en entornos corporativos y de hosting, desde el diseño de arquitectura hasta la operación.</li>
+    <li>Bases de datos: diseño y operación de <b>SQL Server y MySQL</b> en arquitecturas <b>HA/DR</b>.</li>
+    <li>Almacenamiento y continuidad: <b>Dell Unity</b> y estrategias de Disaster Recovery.</li>
+    <li>Automatización operativa: PowerShell, Python y Bash.</li>
+    <li>Arquitecturas híbridas y multicloud (<b>Azure, Google Cloud y AWS</b>), con foco en diseño, operación, seguridad y gobierno de entornos cloud empresariales.</li>
+  </ul>
+
+  <h3>Redes y Seguridad Perimetral</h3>
+  <ul>
+    <li>Gobierno y operación de redes corporativas: VLANs, routing y alta disponibilidad.</li>
+    <li>Firewalls y seguridad perimetral: <b>Fortinet FortiGate</b> y <b>SonicWall NSA 4600/4700</b>, <b>SMA 500v</b> y <b>Cloud Secure Edge (CSE)</b>, con hardening, mantenimiento, actualizaciones y gestión de políticas de extremo a extremo.</li>
+    <li>Acceso seguro: VPN IPSec, SSL VPN y modelos de acceso seguro (<b>ZTNA</b>).</li>
+    <li>Protección de red: IDS/IPS, filtrado web y políticas de seguridad.</li>
+    <li>Balanceo de carga: <b>KEMP, F5 y NGINX</b>.</li>
+    <li>Diseño e implementación de arquitecturas <b>Zero Trust</b>.</li>
+    <li>Coordinación de la respuesta ante ciberataques en capa de red junto a SOC y equipos técnicos.</li>
+  </ul>
+
+  <h3>Ciberseguridad &amp; Compliance</h3>
+  <div class="intro">Gobierno de la ciberseguridad y gestión del riesgo alineado con negocio.</div>
+  <ul>
+    <li>Cumplimiento normativo: <b>ENS, ISO 27001, NIS2, GDPR, ISO/IEC 42001 e ISO/IEC 22301</b>.</li>
+    <li><b>Security by Design</b> y hardening de sistemas.</li>
+    <li>Gestión de identidades y accesos (<b>IAM</b>): control de privilegios y segregación de funciones.</li>
+    <li>Protección de aplicaciones: <b>WAF</b> y mitigación de riesgos OWASP.</li>
+    <li>Monitorización y respuesta: <b>SIEM, EDR</b> y coordinación con SOC.</li>
+    <li>Observabilidad: PRTG y Nagios.</li>
+    <li>Auditoría técnica, de seguridad y financiera, orientada a mejora continua.</li>
+    <li>Hardening de sistemas operativos, bases de datos y plataformas de aplicación (Windows Server, Linux, IIS, Apache, NGINX, Tomcat, SQL Server, MySQL…) (CCN-CERT).</li>
+    <li>Gestión de plataformas colaborativas: <b>SharePoint</b> on-premise y cloud, y planificación y ejecución de migraciones de sistemas en fin de vida (<b>EOL</b>), mitigando riesgos de obsolescencia tecnológica.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">04</span>Certificaciones profesionales</h2>
+  <table class="lay">
+    <tr>
+      <td width="50%"><div class="certcol">
+        <div class="t">Gobierno, Ciberseguridad y Cumplimiento</div>
+        <ul>
+          <li>Capacitación en el Esquema Nacional de Seguridad (ENS) – CCN-CERT
+            <ul class="sub">
+              <li>Esquema Nacional de Seguridad (RD 311/2022, de 3 de mayo)</li>
+              <li>Aproximación práctica al Esquema Nacional de Seguridad</li>
+              <li>Auditorías en el ENS</li>
+              <li>Análisis y Gestión de Riesgos de los Sistemas de Información</li>
+              <li>µCeENS</li>
+              <li>Gestión de Incidentes de Ciberseguridad</li>
+              <li>Ingeniería Social. Descifrando el arte del engaño</li>
+            </ul>
+          </li>
+          <li>ISO/IEC 27001 Lead Auditor</li>
+          <li>ISO/IEC 27001 Lead Implementer</li>
+          <li>ISO/IEC 22301 – Continuidad de Negocio · Internal Auditor</li>
+          <li>ISO/IEC 42001 – Gestión de Inteligencia Artificial · Internal Auditor</li>
+          <li>ISO/IEC 42001 – Gestión de Inteligencia Artificial · Lead Auditor</li>
+          <li>Lead Cybersecurity Professional</li>
+        </ul>
+      </div></td>
+      <td width="50%"><div class="certcol">
+        <div class="t">Seguridad Técnica</div>
+        <ul>
+          <li>Ethical Hacking Professional</li>
+          <li>Certified Red Team Operations Management (CRTOM)</li>
+          <li>Certified Ransomware Protection Officer (CRPO)</li>
+        </ul>
+        <div class="t" style="margin-top:7px">Inteligencia Artificial y Gestión del Riesgo</div>
+        <ul>
+          <li>AI Governance Professional Certification (AIGPC™)</li>
+          <li>AI Risk Manager Professional Certification (AIRMPC™)</li>
+          <li>Generative AI Professional Certification (GAIPC™)</li>
+          <li>Certified LLM Security Expert (CLLMSE)</li>
+        </ul>
+        <div class="t" style="margin-top:7px">Cloud, Redes y DevOps</div>
+        <ul>
+          <li>Google Cloud Certified – Associate Cloud Engineer</li>
+          <li>Google Cloud Cybersecurity Certificate</li>
+          <li>Multicloud Network Associate (Aviatrix)</li>
+          <li>Fortinet Certified Associate in Cybersecurity</li>
+          <li>SonicWall CSE Advanced Accreditation</li>
+          <li>Google Cloud Skill Badges (Networking, Security, Terraform, Load Balancing, App Dev)</li>
+          <li>DevOps Advanced Professional</li>
+          <li>Agile Leader Professional</li>
+          <li>Microsoft – Migrate &amp; Modernize (Azure, Copilot, SQL Migration, App Modernization)</li>
+        </ul>
+      </div></td>
+    </tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">05</span>Formación académica, idiomas y recomendaciones</h2>
+  <div class="skill">
+    <div class="t">Formación académica</div>
+    <div class="intro">Técnico Superior en Desarrollo de Productos Electrónicos — IES Ángel Corella (1997 – 1999).</div>
+  </div>
+  <div class="skill">
+    <div class="t">Idiomas</div>
+    <ul>
+      <li>Español: nativo.</li>
+      <li>Inglés: competencia orientada principalmente a la comprensión de documentación, herramientas y comunicaciones profesionales. Aunque la expresión oral es más limitada, toda mi experiencia se ha desarrollado en entornos donde el inglés es el idioma habitual de referencia y, con el apoyo de herramientas actuales de traducción, no supone una limitación para el desempeño del puesto.</li>
+    </ul>
+  </div>
+  <div class="skill">
+    <div class="t">Recomendaciones profesionales</div>
+    <div class="intro">Recomendaciones contrastadas de directivos, responsables de seguridad y profesionales senior del sector disponibles en LinkedIn, destacando liderazgo técnico, visión estratégica, fiabilidad operativa y capacidad de ejecución en entornos críticos.</div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>Otros datos de interés</h2>
+  <ul>
+    <li>Fundador de <b>GRCreal</b> (grcreal.com), plataforma de divulgación en GRC, ciberseguridad, ENS e inteligencia artificial, y de <b>Technology Advisory</b> (technology-advisory.es), centrada en arquitectura de infraestructura.</li>
+    <li>Autor de publicaciones técnicas en LinkedIn, con reconocimiento por parte de profesionales del sector y recomendaciones públicas que respaldan su trayectoria y liderazgo técnico; <b>asesoramiento y mentoría a técnicos junior de la comunidad, guiándolos en el desarrollo de proyectos</b>.</li>
+    <li>Desarrollo de laboratorios internos y entornos <b>PoC (Proof of Concept)</b> para validación de arquitecturas, controles de seguridad y nuevas tecnologías.</li>
+    <li>Trayectoria consolidada en teletrabajo y dirección remota de equipos técnicos, proveedores y proyectos en entornos corporativos complejos.</li>
+    <li>Formación continua y actualización permanente en infraestructuras, cloud, ciberseguridad, cumplimiento normativo e inteligencia artificial aplicada a la gestión del riesgo.</li>
+    <li>Posicionamiento destacado en rankings de creadores de contenido en ciberseguridad en España (Favikon).</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">07</span>Proyectos propios</h2>
+  <table class="lay">
+    <tr>
+      <td width="25%"><div class="proj"><div class="n">OpenTrust Group</div><div class="u">opentrust.group</div><div class="d">Ecosistema de confianza digital.</div></div></td>
+      <td width="25%"><div class="proj"><div class="n">GRCREAL</div><div class="u">grcreal.com</div><div class="d">Gobierno, Riesgo, Cumplimiento e Inteligencia Artificial.</div></div></td>
+      <td width="25%"><div class="proj"><div class="n">FraudeDigital</div><div class="u">fraudedigital.es</div><div class="d">Prevención, análisis y respuesta frente al fraude digital.</div></div></td>
+      <td width="25%"><div class="proj"><div class="n">Technology Advisory</div><div class="u">technology-advisory.es</div><div class="d">Arquitectura empresarial, infraestructura, cloud y ciberseguridad.</div></div></td>
+    </tr>
+    <tr>
+      <td width="25%"><div class="proj"><div class="n">CyberLibrary AI</div><div class="u">cyberlibrary-ai.es</div><div class="d">Arquitectura, seguridad, auditoría y gobierno de sistemas de Inteligencia Artificial.</div></div></td>
+      <td width="25%"><div class="proj"><div class="n">LexRadar</div><div class="u">lexradar.es</div><div class="d">Inteligencia jurídica y análisis normativo.</div></div></td>
+      <td width="25%"><div class="proj"><div class="n">Arq Studio</div><div class="u">opentrust.group/apps/arq-studio.html</div><div class="d">Diseño, documentación y gobierno profesional de arquitecturas de soluciones.</div></div></td>
+      <td width="25%"><div class="proj"><div class="n">AuditHub</div><div class="u">opentrust.group/apps/audithub.html</div><div class="d">Gestión centralizada de auditorías, controles, evidencias y planes de acción.</div></div></td>
+    </tr>
+  </table>
+</section>
+
+<div class="foot">
+  <b>OPENTRUST GROUP</b> · Arquitectura · Infraestructura · Ciberseguridad · GRC · opentrust.group · macarriazo@opentrust.group
+</div>
+
+</body>
+</html>
