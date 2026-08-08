@@ -1,19 +1,14 @@
 import { initCvEditor } from "./cv-editor.js";
 
-const state = { links: [], filter: "ALL", view: "new-send", cvVersions: [], selectedLinks: new Set() };
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 const MAIL_TEMPLATES = {
-  selection: {
-    subject: "Miguel Ángel Carriazo · Perfil profesional y experiencia",
-    message: `Gracias por tu interés en mi perfil.\n\nA través del enlace incluido en este mensaje podrás consultar mi vida profesional completa, con información actualizada sobre mi experiencia en arquitectura de soluciones, infraestructura, ciberseguridad, gobierno tecnológico, continuidad, cloud y liderazgo de equipos y servicios críticos.\n\nEl acceso es personal y temporal. Quedo a tu disposición para ampliar cualquier aspecto de mi trayectoria o comentar el posible encaje con la posición.`
-  },
-  executive: {
-    subject: "Miguel Ángel Carriazo · Trayectoria en Arquitectura, Infraestructura y Ciberseguridad",
-    message: `Te facilito acceso temporal a mi vida profesional completa, desarrollada durante más de 25 años en entornos tecnológicos críticos, regulados, híbridos y cloud.\n\nEl documento recoge mi experiencia en gobierno de arquitectura, infraestructura, ciberseguridad, continuidad de negocio, gestión de riesgos, cumplimiento, operaciones IT, liderazgo y transformación tecnológica.\n\nTambién incluye los proyectos y productos profesionales que desarrollo dentro del ecosistema OpenTrust Group. Estaré encantado de ampliar cualquier información que resulte relevante.`
-  }
+  selection: { name: "Proceso de selección", description: "Directa, profesional y orientada a recruiters.", subject: "Miguel Ángel Carriazo · Perfil profesional y experiencia", message: `Gracias por tu interés en mi perfil.\n\nA través del enlace incluido en este mensaje podrás consultar mi vida profesional completa, con información actualizada sobre mi experiencia en arquitectura de soluciones, infraestructura, ciberseguridad, gobierno tecnológico, continuidad, cloud y liderazgo de equipos y servicios críticos.\n\nEl acceso es personal y temporal. Quedo a tu disposición para ampliar cualquier aspecto de mi trayectoria o comentar el posible encaje con la posición.` },
+  executive: { name: "Perfil ejecutivo", description: "Más sénior y centrada en gobierno y liderazgo.", subject: "Miguel Ángel Carriazo · Trayectoria en Arquitectura, Infraestructura y Ciberseguridad", message: `Te facilito acceso temporal a mi vida profesional completa, desarrollada durante más de 25 años en entornos tecnológicos críticos, regulados, híbridos y cloud.\n\nEl documento recoge mi experiencia en gobierno de arquitectura, infraestructura, ciberseguridad, continuidad de negocio, gestión de riesgos, cumplimiento, operaciones IT, liderazgo y transformación tecnológica.\n\nTambién incluye los proyectos y productos profesionales que desarrollo dentro del ecosistema OpenTrust Group. Estaré encantado de ampliar cualquier información que resulte relevante.` }
 };
+
+const state = { links: [], filter: "ALL", view: "new-send", cvVersions: [], selectedLinks: new Set(), mailTemplates: structuredClone(MAIL_TEMPLATES), editingTemplate: false };
 
 const VIEW_COPY = {
   "new-send": ["Nuevo envío", "Genera un acceso temporal y envíalo con una presentación profesional."],
@@ -26,6 +21,7 @@ const VIEW_COPY = {
 init();
 async function init(){
   bind();
+  await loadMailTemplates();
   applyTemplate("selection");
   navigate(location.hash.replace("#", "") || "new-send", false);
   await Promise.all([loadCv(), loadCvVersions(), loadLinks(), loadStatistics()]);
@@ -33,9 +29,14 @@ async function init(){
 }
 
 function bind(){
-  $$('[data-view]').forEach((el)=>el.addEventListener('click',(event)=>{event.preventDefault();navigate(el.dataset.view);}));
+  $$('[data-view]').forEach((el)=>el.addEventListener('click',(event)=>{event.preventDefault();navigate(el.dataset.view);closeMobileMenu();}));
   window.addEventListener('hashchange',()=>navigate(location.hash.replace('#','') || 'new-send',false));
-  $$('input[name="mail-template"]').forEach(el=>el.addEventListener('change',()=>{if(el.checked)applyTemplate(el.value);}));
+  $$('input[name="mail-template"]').forEach(el=>el.addEventListener('change',()=>{if(el.checked){if(state.editingTemplate)cancelTemplateEdit();applyTemplate(el.value);}}));
+  $('#edit-mail-template')?.addEventListener('click',startTemplateEdit);
+  $('#save-mail-template')?.addEventListener('click',saveTemplateEdit);
+  $('#cancel-mail-template')?.addEventListener('click',cancelTemplateEdit);
+  $('#mobile-menu-toggle')?.addEventListener('click',toggleMobileMenu);
+  $('#mobile-menu-backdrop')?.addEventListener('click',closeMobileMenu);
   $$('input[name="expiry"]').forEach(el=>el.addEventListener('change',()=>$('#custom-date-wrap').classList.toggle('hidden',el.value!=="custom" || !el.checked)));
   $('#single-use').addEventListener('change',e=>$('#downloads-wrap').classList.toggle('hidden',e.target.checked));
   $('#link-form').addEventListener('submit',sendCv);
@@ -74,11 +75,56 @@ function navigate(view, updateHash=true){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+async function loadMailTemplates(){
+  try{
+    const data=await api('/api/mail-templates');
+    for(const item of data.templates||[]){
+      state.mailTemplates[item.template_key]={name:item.name,description:item.description,subject:item.subject,message:item.message};
+    }
+    renderTemplateCards();
+  }catch(e){
+    console.warn('No se pudieron cargar plantillas desde D1; se usan las predeterminadas.',e);
+    renderTemplateCards();
+  }
+}
+function selectedTemplateKey(){return $('input[name="mail-template"]:checked')?.value||'selection';}
+function renderTemplateCards(){
+  Object.entries(state.mailTemplates).forEach(([key,t])=>{
+    const name=$(`[data-template-name="${key}"]`);const desc=$(`[data-template-description="${key}"]`);
+    if(name)name.textContent=t.name;if(desc)desc.textContent=t.description;
+  });
+}
 function applyTemplate(templateKey){
-  const template=MAIL_TEMPLATES[templateKey] || MAIL_TEMPLATES.selection;
+  const template=state.mailTemplates[templateKey] || state.mailTemplates.selection;
   $('#mail-subject').value=template.subject;
   $('#mail-message').value=template.message;
 }
+function setTemplateEditing(editing){
+  state.editingTemplate=editing;
+  $('#mail-subject').readOnly=!editing;$('#mail-message').readOnly=!editing;
+  $('#template-edit-grid').classList.toggle('hidden',!editing);
+  $('#edit-mail-template').classList.toggle('hidden',editing);
+  $('#save-mail-template').classList.toggle('hidden',!editing);
+  $('#cancel-mail-template').classList.toggle('hidden',!editing);
+  $$('input[name="mail-template"]').forEach(x=>x.disabled=editing);
+}
+function startTemplateEdit(){
+  const key=selectedTemplateKey();const t=state.mailTemplates[key];
+  $('#template-name').value=t.name;$('#template-description').value=t.description;setTemplateEditing(true);$('#mail-subject').focus();
+}
+function cancelTemplateEdit(){setTemplateEditing(false);applyTemplate(selectedTemplateKey());}
+async function saveTemplateEdit(){
+  const key=selectedTemplateKey();const button=$('#save-mail-template');button.disabled=true;button.textContent='Guardando…';
+  try{
+    const body={name:$('#template-name').value.trim(),description:$('#template-description').value.trim(),subject:$('#mail-subject').value.trim(),message:$('#mail-message').value.trim()};
+    const data=await api(`/api/mail-templates/${key}`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    state.mailTemplates[key]={name:data.template.name,description:data.template.description,subject:data.template.subject,message:data.template.message};
+    renderTemplateCards();setTemplateEditing(false);applyTemplate(key);toast('Plantilla guardada');
+  }catch(e){toast(e.message);}finally{button.disabled=false;button.textContent='Guardar plantilla';}
+}
+function toggleMobileMenu(){document.body.classList.contains('menu-open')?closeMobileMenu():openMobileMenu();}
+function openMobileMenu(){document.body.classList.add('menu-open');$('#mobile-menu-toggle')?.setAttribute('aria-expanded','true');const b=$('#mobile-menu-backdrop');if(b)b.hidden=false;}
+function closeMobileMenu(){document.body.classList.remove('menu-open');$('#mobile-menu-toggle')?.setAttribute('aria-expanded','false');const b=$('#mobile-menu-backdrop');if(b)b.hidden=true;}
 
 async function loadCv(){
   try{const data=await api('/api/cv');
@@ -170,7 +216,11 @@ function renderCvVersions(){
   </tr>`).join(''):'<tr><td colspan="6" class="empty">Todavía no has subido ningún PDF.</td></tr>';
   $$('[data-preview-version]').forEach(b=>b.addEventListener('click',()=>previewCvVersion(Number(b.dataset.previewVersion),b.dataset.previewName)));
   $$('[data-activate]').forEach(b=>b.addEventListener('click',()=>activateVersion(Number(b.dataset.activate))));
-  $$('[data-delete-version]').forEach(b=>b.addEventListener('click',()=>deleteVersion(Number(b.dataset.deleteVersion))));
+  $$('[data-delete-version]').forEach(b=>b.addEventListener('click',(event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    deleteVersion(Number(b.dataset.deleteVersion),b);
+  }));
 }
 
 function previewCvVersion(id,name){
@@ -195,10 +245,23 @@ async function activateVersion(id){
   catch(e){toast(e.message);}
 }
 
-async function deleteVersion(id){
-  if(!confirm('Se eliminará el PDF permanentemente. El histórico de a quién se le envió se conserva. ¿Continuar?'))return;
-  try{await api(`/api/cv/versions/${id}`,{method:'DELETE'});toast('Versión eliminada');await loadCvVersions();}
-  catch(e){toast(e.message);}
+async function deleteVersion(id,button){
+  if(!confirm('Se eliminará este PDF del almacenamiento. El histórico de envíos se conserva. ¿Continuar?'))return;
+
+  const originalText=button?.textContent||'Eliminar';
+  if(button){button.disabled=true;button.textContent='Eliminando…';}
+
+  try{
+    closeCvPreview();
+    await api(`/api/cv/versions/${id}/delete`,{method:'POST'});
+    toast('Documento eliminado');
+    await Promise.all([loadCv(),loadCvVersions()]);
+    if(state.view!=='document')navigate('document');
+  }catch(e){
+    toast(e.message||'No se pudo eliminar el documento.');
+  }finally{
+    if(button&&document.body.contains(button)){button.disabled=false;button.textContent=originalText;}
+  }
 }
 
 async function loadStatistics(){
@@ -297,7 +360,13 @@ async function readResponse(response){
   const text=await response.text();
   if(!text)return {};
   try{return JSON.parse(text);}
-  catch{throw new Error(text.trim()||`Respuesta no válida (HTTP ${response.status})`);}
+  catch{
+    const contentType=(response.headers.get('content-type')||'').toLowerCase();
+    if(contentType.includes('text/html')||/^\s*</.test(text)){
+      throw new Error(`Respuesta inesperada del servidor (HTTP ${response.status}). Recarga CV Studio e inténtalo de nuevo.`);
+    }
+    throw new Error(text.trim()||`Respuesta no válida (HTTP ${response.status})`);
+  }
 }
 async function copyText(text,notify=true){await navigator.clipboard.writeText(text);if(notify)toast('Copiado al portapapeles');}
 function formatDate(v){return new Intl.DateTimeFormat('es-ES',{dateStyle:'short',timeStyle:'short'}).format(new Date(v));}

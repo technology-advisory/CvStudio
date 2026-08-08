@@ -1,6 +1,6 @@
 {
   "name": "opentrust-cv-studio",
-  "version": "0.4.1",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "CV Studio de OpenTrust Group para gestionar, versionar y distribuir de forma segura un CV profesional mediante enlaces temporales.",

@@ -54,6 +54,11 @@ export default {
       const versionPreviewMatch = path.match(/^\/api\/cv\/versions\/(\d+)\/preview$/);
       if (versionPreviewMatch && request.method === "GET") return await downloadCvVersion(env, Number(versionPreviewMatch[1]), true);
 
+      const versionDeleteActionMatch = path.match(/^\/api\/cv\/versions\/(\d+)\/delete$/);
+      if (versionDeleteActionMatch && request.method === "POST") return await deleteCvVersion(env, Number(versionDeleteActionMatch[1]));
+
+      // Compatibilidad con versiones anteriores del frontend. El portal actual
+      // usa POST /delete para evitar navegaciones/respuestas HTML inesperadas.
       const versionDeleteMatch = path.match(/^\/api\/cv\/versions\/(\d+)$/);
       if (versionDeleteMatch && request.method === "DELETE") return await deleteCvVersion(env, Number(versionDeleteMatch[1]));
 
@@ -75,6 +80,11 @@ export default {
       if (path === "/api/statistics" && request.method === "GET") return await getStatistics(env);
       if (path === "/api/links" && request.method === "POST") return await createLink(request, env, publicBaseUrl(env, url.origin));
       if (path === "/api/mail/preview" && request.method === "POST") return await previewMail(request, env, publicBaseUrl(env, url.origin));
+      if (path === "/api/mail-templates" && request.method === "GET") return await listMailTemplates(env);
+
+      const mailTemplateMatch = path.match(/^\/api\/mail-templates\/([a-z0-9_-]+)$/);
+      if (mailTemplateMatch && request.method === "PUT") return await updateMailTemplate(request, env, mailTemplateMatch[1]);
+
       if (path === "/api/send-cv" && request.method === "POST") return await createAndSend(request, env, publicBaseUrl(env, url.origin));
 
       const sentMatch = path.match(/^\/api\/links\/(\d+)\/sent$/);
@@ -342,6 +352,29 @@ async function createLink(request, env, origin) {
   const body = await request.json().catch(() => ({}));
   const result = await createLinkRecord(body, env, origin);
   return json({ ok: true, ...result }, 201);
+}
+
+async function listMailTemplates(env) {
+  const { results } = await env.DB.prepare(`SELECT template_key, name, description, subject, message, updated_at
+    FROM mail_templates ORDER BY CASE template_key WHEN 'selection' THEN 1 WHEN 'executive' THEN 2 ELSE 99 END, template_key`).all();
+  return json({ templates: results || [] });
+}
+
+async function updateMailTemplate(request, env, templateKey) {
+  if (!/^[a-z0-9_-]{2,40}$/.test(templateKey)) throw httpError("Plantilla no válida.", 400);
+  const body = await request.json().catch(() => ({}));
+  const name = cleanOptionalText(body.name, 80);
+  const description = cleanOptionalText(body.description, 180);
+  const subject = cleanOptionalText(body.subject, 160);
+  const message = cleanOptionalText(body.message, 3000);
+  if (!name || !description || !subject || !message) throw httpError("Completa todos los campos de la plantilla.", 400);
+  const updatedAt = new Date().toISOString();
+  const result = await env.DB.prepare(`UPDATE mail_templates
+    SET name = ?, description = ?, subject = ?, message = ?, updated_at = ?
+    WHERE template_key = ?`)
+    .bind(name, description, subject, message, updatedAt, templateKey).run();
+  if (!Number(result.meta?.changes || 0)) throw httpError("La plantilla no existe.", 404);
+  return json({ ok: true, template: { template_key: templateKey, name, description, subject, message, updated_at: updatedAt } });
 }
 
 async function createAndSend(request, env, origin) {

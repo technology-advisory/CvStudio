@@ -1,11 +1,13 @@
 # CV Studio · variables locales (NO subir .dev.vars a Git)
+# Copia este archivo como .dev.vars y sustituye solo los valores sensibles.
 
-# Zoho Mail SMTP directo (local y Cloudflare)
+# Zoho Mail SMTP directo (misma configuración lógica que producción)
 SMTP_HOST=smtppro.zoho.eu
 SMTP_PORT=587
 SMTP_SECURITY=starttls
 SMTP_USER=macarriazo@technology-advisory.es
-SMTP_PASSWORD=CAMBIAR_POR_CONTRASENA_DE_APLICACION
-SMTP_FROM=macarriazo@technology-advisory.es
+SMTP_PASSWORD=CAMBIAR_POR_PASSWORD_O_APP_PASSWORD_DE_ZOHO
+SMTP_FROM=macarriazo@opentrust.group
 SMTP_FROM_NAME=Miguel Ángel Carriazo · OpenTrust Group
-SMTP_REPLY_TO=macarriazo@technology-advisory.es
+SMTP_REPLY_TO=macarriazo@opentrust.group
+ALERT_EMAIL_TO=macarriazo@opentrust.group

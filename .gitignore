@@ -1,55 +1,14 @@
-# Dependencies
 node_modules/
-
-# Local development
-.dev-static/
 .wrangler/
-.local-data/
-
-# Environment / secrets
-.env
-.env.*
+.dev-static/
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
-
-# Logs
+.env
+.env.*
 *.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-*.bak
-*.old
-
-# OS / editor
+*.zip
+bak/
+storage-local/*.pdf
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/
-
-# Local databases / storage
-*.sqlite
-*.sqlite3
-*.db
-
-# Backups and archives
-bak/
-backup/
-backups/
-*.zip
-
-# Generated PDFs / local test documents
-*.pdf
-
-# Coverage / tests output
-coverage/
-
-# Misc build output
-dist/
-build/

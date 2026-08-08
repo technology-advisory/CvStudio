@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
 
-  "name": "opentrust-cv-studio",
+  "name": "cvstudio",
 
   "main": "src/worker.js",
 

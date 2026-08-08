@@ -134,3 +134,34 @@
   .links-toolbar button,.retention-actions select{width:100%}
   .retention-actions label{white-space:normal}
 }
+
+/* --- CV Studio responsive navigation + editable mail templates --- */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.mobile-menu-toggle{display:none;position:fixed;top:14px;left:14px;z-index:60;width:46px;height:46px;border:1px solid #c7d8df;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(7,21,38,.14);padding:11px;cursor:pointer}
+.mobile-menu-toggle span{display:block;height:2px;background:#0b2035;margin:5px 0;border-radius:2px}
+.mobile-menu-backdrop{position:fixed;inset:0;background:rgba(4,18,31,.48);backdrop-filter:blur(2px);z-index:45}
+.template-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:18px 0 10px}.template-heading>div:first-child{display:grid;gap:4px}.template-heading small{color:var(--muted);line-height:1.4}.template-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.template-edit-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;margin:0 0 14px;padding:14px;border:1px solid #cfe0e6;border-radius:14px;background:#f6fbfc}.field input[readonly],.field textarea[readonly]{background:#f6f8fa;color:#344659;cursor:default}.field input:not([readonly]),.field textarea:not([readonly]){background:#fff}.compact{white-space:nowrap}
+
+@media(max-width:1180px){
+  .mobile-menu-toggle{display:block}
+  .sidebar{position:fixed!important;inset:0 auto 0 0!important;width:min(310px,86vw)!important;height:100dvh!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;padding:28px 22px!important;z-index:55!important;transform:translateX(-105%);transition:transform .22s ease;box-shadow:18px 0 50px rgba(4,18,31,.24)}
+  body.menu-open{overflow:hidden}.menu-open .sidebar{transform:translateX(0)}
+  .sidebar nav{display:grid!important;margin-top:42px!important;gap:8px!important}.sidebar nav a{display:block!important}
+  .privacy-note{display:block!important;margin-top:auto!important}.logout-btn{margin-top:18px}
+  main{margin-left:0!important;padding-top:78px!important;max-width:none!important}
+  .topbar{gap:18px}.topbar>div{min-width:0}.topbar h1{line-height:1.1}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .links-toolbar{align-items:flex-start;flex-wrap:wrap}.bulk-actions,.retention-actions{width:100%;justify-content:flex-start}
+}
+@media(min-width:1181px){.mobile-menu-backdrop{display:none!important}}
+@media(max-width:760px){
+  main{padding:74px 14px 44px!important}.panel{padding:16px!important;border-radius:14px}.topbar{display:block!important}.environment{margin-top:12px}.stats{grid-template-columns:1fr 1fr;gap:10px}.stats article{padding:14px}.stats strong{font-size:1.45rem}
+  .panel-heading{align-items:flex-start;gap:10px;flex-wrap:wrap}.panel-heading>button,.panel-heading>.secure-badge{margin-left:0}
+  .template-heading{align-items:flex-start;flex-direction:column}.template-actions{width:100%;justify-content:flex-start}.template-actions button{flex:1 1 auto}.template-options{grid-template-columns:1fr!important}.template-edit-grid{grid-template-columns:1fr}
+  .mail-grid,.send-actions{grid-template-columns:1fr!important}.send-actions button{width:100%}
+  .expiry-options{grid-template-columns:repeat(2,minmax(0,1fr))}.filters{overflow-x:auto;display:flex!important;flex-wrap:nowrap!important;padding-bottom:3px}.filters button{flex:0 0 auto}
+  .links-toolbar{padding:12px}.bulk-actions,.retention-actions{display:flex;flex-direction:column;align-items:stretch!important;gap:8px!important}.bulk-actions button,.retention-actions button,.retention-actions select{width:100%}.select-all{min-height:42px}
+  .table-wrap{margin-left:-4px;margin-right:-4px;border-radius:10px}.table-wrap table{min-width:720px}.row-actions,.link-actions{min-width:170px}
+  .cv-editor-layout{display:block!important}.cv-preview-column{margin-top:18px}.cv-page-shell{height:62vh!important;min-height:440px}.cv-editor-actions{display:grid!important;grid-template-columns:1fr!important}.cv-editor-actions button{width:100%!important;margin-left:0!important}
+}
+@media(max-width:420px){.stats{grid-template-columns:1fr}.expiry-options{grid-template-columns:1fr}.mobile-menu-toggle{top:10px;left:10px}.topbar h1{font-size:1.7rem}.topbar p:not(.eyebrow){font-size:.9rem}}
