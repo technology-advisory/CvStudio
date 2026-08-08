@@ -9,7 +9,6 @@ const nodeExecutable = process.execPath;
 const wranglerCli = path.join(projectRoot, "node_modules", "wrangler", "bin", "wrangler.js");
 
 prepareStaticAssets({ clean: true });
-watchStaticAssets();
 applyPendingMigrations();
 
 const processes = [
@@ -113,45 +112,14 @@ function sleepSync(ms) {
 }
 
 /**
- * index.html, app.html, css/, js/, assets/ y templates/ solo se copian a
- * .dev-static una vez, al arrancar — a diferencia de src/ (el Worker), que
- * wrangler recarga solo en cada guardado. Sin este watcher, un cambio en
- * cualquier .js o .css del navegador se queda invisible hasta reiniciar
- * 'npm run dev' a mano, y eso es fácil de olvidar. Aquí lo mantenemos
- * sincronizado mientras el servidor está corriendo — siempre con
- * clean:false (ver prepareStaticAssets).
+ * Los recursos web se preparan una sola vez al arrancar.
+ *
+ * No usamos fs.watch() sobre HTML/CSS/JS porque en algunas unidades Windows
+ * o compartidas (como Z:) los eventos de cambio pueden retroalimentarse al
+ * copiar archivos a .dev-static y provocar un bucle de recargas.
+ *
+ * Si cambias recursos frontend durante desarrollo, reinicia `npm run dev`.
  */
-function watchStaticAssets() {
-  // Los favicons se copian al arrancar, pero NO se vigilan. En algunas unidades
-  // Windows/red (como Z:) leer/copiar estos ficheros puede emitir eventos de
-  // cambio sobre el propio origen y provocar un bucle de resincronización.
-  const targets = ["index.html", "app.html", "css", "js", "assets", "templates"];
-  let pending = null;
-  const resync = () => {
-    clearTimeout(pending);
-    pending = setTimeout(() => {
-      try {
-        prepareStaticAssets({ clean: false });
-        console.log("[dev] Recursos web actualizados (cambio detectado)");
-      } catch (error) {
-        console.error("[dev] No se pudieron actualizar los recursos estáticos:", error.message);
-      }
-    }, 150);
-  };
-
-  for (const target of targets) {
-    const fullPath = path.join(projectRoot, target);
-    if (!fs.existsSync(fullPath)) continue;
-    try {
-      fs.watch(fullPath, { recursive: true }, resync);
-    } catch {
-      // 'recursive' no soportado en este SO/versión de Node (típico en Linux
-      // antiguo); nos quedamos con la vigilancia no recursiva del nivel raíz.
-      fs.watch(fullPath, resync);
-    }
-  }
-}
-
 function copyRequired(relativePath) {
   const source = path.join(projectRoot, relativePath);
   const destination = path.join(staticDir, relativePath);

@@ -151,10 +151,17 @@ async function publishToDocument() {
       body: JSON.stringify({ model: state.model, mode: "print" })
     });
 
-    // 3) En desarrollo local, un pequeño servicio Node usa Edge/Chrome
-    // headless para convertir ese HTML a PDF sin abrir la ventana de impresión.
-    const renderResponse = await fetch("http://127.0.0.1:10062/render-pdf", {
+    // 3) Mismo flujo en ambos entornos, cambiando únicamente el motor PDF:
+    //    - LOCAL: Edge/Chrome headless en 127.0.0.1:10062.
+    //    - PRO: Cloudflare Browser Run mediante /api/cv-content/pdf.
+    const isLocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+    const pdfEndpoint = isLocal
+      ? "http://127.0.0.1:10062/render-pdf"
+      : "/api/cv-content/pdf";
+
+    const renderResponse = await fetch(pdfEndpoint, {
       method: "POST",
+      credentials: isLocal ? "omit" : "same-origin",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ html })
     });

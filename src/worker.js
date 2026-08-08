@@ -62,6 +62,7 @@ export default {
       if (path === "/api/cv-content" && request.method === "PUT") return await saveDraft(request, env);
       if (path === "/api/cv-content/reset" && request.method === "POST") return await resetDraft(env);
       if (path === "/api/cv-content/render" && request.method === "POST") return await renderPreview(request);
+      if (path === "/api/cv-content/pdf" && request.method === "POST") return await renderPdfWithBrowserRun(request, env);
       if (path === "/api/cv-content/publish" && request.method === "POST") return await publishDraft(request, env);
       if (path === "/api/cv-content/versions" && request.method === "GET") return await listContentVersions(env);
 
@@ -72,9 +73,9 @@ export default {
 
       if (path === "/api/links" && request.method === "GET") return await listLinks(env);
       if (path === "/api/statistics" && request.method === "GET") return await getStatistics(env);
-      if (path === "/api/links" && request.method === "POST") return await createLink(request, env, url.origin);
-      if (path === "/api/mail/preview" && request.method === "POST") return await previewMail(request, env, url.origin);
-      if (path === "/api/send-cv" && request.method === "POST") return await createAndSend(request, env, url.origin);
+      if (path === "/api/links" && request.method === "POST") return await createLink(request, env, publicBaseUrl(env, url.origin));
+      if (path === "/api/mail/preview" && request.method === "POST") return await previewMail(request, env, publicBaseUrl(env, url.origin));
+      if (path === "/api/send-cv" && request.method === "POST") return await createAndSend(request, env, publicBaseUrl(env, url.origin));
 
       const sentMatch = path.match(/^\/api\/links\/(\d+)\/sent$/);
       if (sentMatch && request.method === "POST") return await markLinkSent(request, env, Number(sentMatch[1]));
@@ -108,6 +109,62 @@ export default {
     );
   }
 };
+
+async function renderPdfWithBrowserRun(request, env) {
+  if (!env.BROWSER || typeof env.BROWSER.quickAction !== "function") {
+    throw httpError("Browser Run no está configurado en este Worker.", 503);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    throw httpError("Petición JSON inválida.", 400);
+  }
+
+  const html = String(payload?.html || "");
+  if (!html.trim()) throw httpError("Falta el HTML a renderizar.", 400);
+  if (new TextEncoder().encode(html).byteLength > 8 * 1024 * 1024) {
+    throw httpError("El documento es demasiado grande para generar el PDF.", 413);
+  }
+
+  const result = await env.BROWSER.quickAction("pdf", {
+    html,
+    pdfOptions: {
+      format: "a4",
+      printBackground: true,
+      preferCSSPageSize: true,
+      displayHeaderFooter: false,
+      margin: {
+        top: "0",
+        right: "0",
+        bottom: "0",
+        left: "0"
+      }
+    }
+  });
+
+  if (!result.ok) {
+    const detail = await result.text().catch(() => "");
+    throw httpError(detail || `Browser Run devolvió HTTP ${result.status}.`, 502);
+  }
+
+  const pdf = await result.arrayBuffer();
+  const signature = new Uint8Array(pdf.slice(0, 5));
+  const isPdf = signature.length === 5 &&
+    signature[0] === 0x25 && signature[1] === 0x50 && signature[2] === 0x44 &&
+    signature[3] === 0x46 && signature[4] === 0x2d;
+  if (!isPdf) throw httpError("Browser Run no devolvió un PDF válido.", 502);
+
+  return new Response(pdf, {
+    status: 200,
+    headers: {
+      "content-type": "application/pdf",
+      "cache-control": "no-store",
+      "content-disposition": "inline; filename=CV_Miguel_Angel_Carriazo.pdf"
+    }
+  });
+}
 
 async function getCurrentCv(env) {
   const row = await activeCv(env);
@@ -271,6 +328,13 @@ async function downloadCvVersion(env, id, inline) {
   headers.set("content-disposition", `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(row.file_name)}`);
   headers.set("cache-control", "private, no-store");
   return new Response(object.body, { headers });
+}
+
+
+function publicBaseUrl(env, fallbackOrigin) {
+  const configured = String(env.PUBLIC_BASE_URL || "").trim();
+  const base = configured || fallbackOrigin;
+  return base.replace(/\/+$/, "");
 }
 
 

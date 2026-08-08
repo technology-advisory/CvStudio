@@ -17,6 +17,10 @@
     "not_found_handling": "none"
   },
 
+  "browser": {
+    "binding": "BROWSER"
+  },
+
   "d1_databases": [
     {
       "binding": "DB",
@@ -42,6 +46,7 @@
   "vars": {
     "APP_NAME": "OpenTrust CV Studio",
     "RETENTION_DAYS": "90",
+    "PUBLIC_BASE_URL": "https://cvstudio.opentrust.group",
     "SMTP_HOST": "smtppro.zoho.eu",
     "SMTP_PORT": "587",
     "SMTP_SECURITY": "starttls"
