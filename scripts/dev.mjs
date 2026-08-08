@@ -18,9 +18,6 @@ const processes = [
     command: nodeExecutable,
     args: [path.join(projectRoot, "scripts", "pdf-renderer.mjs")]
   },
-  ...(hasLocalSmtpConfig()
-    ? [{ name: "mail-relay", command: nodeExecutable, args: [path.join(projectRoot, "scripts", "smtp-relay.mjs")] }]
-    : []),
   {
     name: "wrangler",
     command: nodeExecutable,
@@ -28,9 +25,6 @@ const processes = [
   }
 ];
 
-if (!hasLocalSmtpConfig()) {
-  console.log("[dev] SMTP no configurado · mail-relay desactivado");
-}
 
 const children = [];
 let closing = false;
@@ -82,6 +76,12 @@ function prepareStaticAssets({ clean = false } = {}) {
 
   copyRequired("index.html");
   copyRequired("app.html");
+  copyOptionalFile("favicon.ico");
+  copyOptionalFile("favicon-16x16.png");
+  copyOptionalFile("favicon-32x32.png");
+  copyOptionalFile("apple-touch-icon.png");
+  copyOptionalFile("android-chrome-192x192.png");
+  copyOptionalFile("android-chrome-512x512.png");
   copyOptionalDirectory("css");
   copyOptionalDirectory("js");
   copyOptionalDirectory("assets");
@@ -122,6 +122,9 @@ function sleepSync(ms) {
  * clean:false (ver prepareStaticAssets).
  */
 function watchStaticAssets() {
+  // Los favicons se copian al arrancar, pero NO se vigilan. En algunas unidades
+  // Windows/red (como Z:) leer/copiar estos ficheros puede emitir eventos de
+  // cambio sobre el propio origen y provocar un bucle de resincronización.
   const targets = ["index.html", "app.html", "css", "js", "assets", "templates"];
   let pending = null;
   const resync = () => {
@@ -159,25 +162,20 @@ function copyRequired(relativePath) {
   fs.copyFileSync(source, destination);
 }
 
+function copyOptionalFile(relativePath) {
+  const source = path.join(projectRoot, relativePath);
+  if (!fs.existsSync(source)) return;
+  const destination = path.join(staticDir, relativePath);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(source, destination);
+}
+
 function copyOptionalDirectory(relativePath) {
   const source = path.join(projectRoot, relativePath);
   if (!fs.existsSync(source)) return;
   // force:true (por defecto en cpSync) sobrescribe los archivos existentes
   // sin necesidad de borrar el directorio destino primero.
   fs.cpSync(source, path.join(staticDir, relativePath), { recursive: true, force: true });
-}
-
-function hasLocalSmtpConfig() {
-  const file = path.join(projectRoot, ".dev.vars");
-  if (!fs.existsSync(file)) return false;
-  const vars = {};
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
-    const index = trimmed.indexOf("=");
-    vars[trimmed.slice(0, index).trim()] = trimmed.slice(index + 1).trim().replace(/^['"]|['"]$/g, "");
-  }
-  return ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"].every((name) => Boolean(vars[name]));
 }
 
 function stop(exitCode = 0) {

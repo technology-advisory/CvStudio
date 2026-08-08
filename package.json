@@ -4,29 +4,17 @@
   "private": true,
   "type": "module",
   "description": "CV Studio de OpenTrust Group para gestionar, versionar y distribuir de forma segura un CV profesional mediante enlaces temporales.",
-
   "scripts": {
     "build": "node scripts/build-static.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:worker": "wrangler dev --local --port 10060",
-    "dev:mail": "node scripts/smtp-relay.mjs",
-
     "db:init": "wrangler d1 migrations apply cv-studio-db --local",
     "db:remote": "wrangler d1 migrations apply cv-studio-db --remote",
-
     "setup": "npm run db:init",
-
     "test": "node --test",
-
-    "check": "node --check src/worker.js && node --check src/mail-service.js && node --check js/dashboard.js && node --check js/cv-editor.js && node --check scripts/smtp-relay.mjs && node --check scripts/pdf-renderer.mjs && node --check scripts/dev.mjs && node --check scripts/build-static.mjs",
-
+    "check": "node --check src/worker.js && node --check src/mail-service.js && node --check js/dashboard.js && node --check js/cv-editor.js && node --check scripts/pdf-renderer.mjs && node --check scripts/dev.mjs && node --check scripts/build-static.mjs",
     "audit": "npm audit"
   },
-
-  "dependencies": {
-    "nodemailer": "^7.0.5"
-  },
-
   "devDependencies": {
     "wrangler": "^4.82.1"
   }

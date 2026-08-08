@@ -290,6 +290,11 @@ async function createAndSend(request, env, origin) {
 
   try {
     await sendCvEmail(env, { to, recipientName, subject, message, ...result });
+    await env.DB.prepare(`UPDATE download_links
+      SET sent_at = ?, recipient_email = COALESCE(?, recipient_email),
+          recipient_name = COALESCE(?, recipient_name), email_subject = COALESCE(?, email_subject)
+      WHERE id = ?`)
+      .bind(new Date().toISOString(), to, recipientName || null, subject, result.id).run();
   } catch (error) {
     console.error("SMTP send failed", error);
     await env.DB.prepare(`UPDATE download_links

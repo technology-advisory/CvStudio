@@ -64,6 +64,13 @@ function navigate(view, updateHash=true){
   $('#view-title').textContent=VIEW_COPY[view][0];
   $('#view-subtitle').textContent=VIEW_COPY[view][1];
   if(updateHash && location.hash!==`#${view}`) history.pushState(null,'',`#${view}`);
+
+  // Los accesos al CV pueden producirse desde otro navegador o dispositivo.
+  // Refrescamos los módulos dinámicos al entrar para no mostrar datos obsoletos.
+  if(view==='statistics') loadStatistics();
+  if(view==='links') loadLinks();
+  if(view==='document') { loadCv(); loadCvVersions(); }
+
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -87,72 +94,22 @@ async function sendCv(e){
   e.preventDefault();
   const button=e.submitter;
   button.disabled=true;
-  button.textContent='Generando enlace…';
-  let createdLink=null;
+  button.textContent='Generando enlace y enviando…';
 
   try{
     const body=mailPayload();
-
-    // 1. El Worker genera y registra el enlace temporal.
-    createdLink=await api('/api/links',{
+    const result=await api('/api/send-cv',{
       method:'POST',
       headers:{'content-type':'application/json'},
       body:JSON.stringify(body)
     });
-    showGenerated(createdLink);
-    await loadLinks();
-
-    // 2. El Worker genera el HTML y el texto con el enlace y la caducidad reales.
-    button.textContent='Preparando correo…';
-    const rendered=await api('/api/mail/preview',{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({
-        ...body,
-        url:createdLink.url,
-        expiresAt:createdLink.expiresAt,
-        maxDownloads:createdLink.maxDownloads
-      })
-    });
-
-    // 3. En local, el navegador llama al relay Node directamente. Evita que
-    // workerd intente acceder a localhost y devuelva un 503 de texto plano.
-    button.textContent='Enviando…';
-    const relayResponse=await fetch('http://127.0.0.1:10061/send',{
-      method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'x-local-relay-key':'local-development-only'
-      },
-      body:JSON.stringify({
-        to:body.to,
-        subject:rendered.subject || body.subject,
-        html:rendered.html,
-        text:rendered.text
-      })
-    });
-    const relayData=await readResponse(relayResponse);
-    if(!relayResponse.ok){
-      throw new Error(relayData.detail||relayData.error||`El relay SMTP respondió con HTTP ${relayResponse.status}.`);
-    }
-
-    await api(`/api/links/${createdLink.id}/sent`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({to:body.to,recipientName:body.recipientName,subject:body.subject})});
+    showGenerated(result);
     await Promise.all([loadLinks(),loadStatistics()]);
     toast('Correo enviado correctamente');
   }catch(err){
-    if(createdLink?.id){
-      try{
-        await api(`/api/links/${createdLink.id}/revoke`,{method:'POST'});
-        await loadLinks();
-      }catch(revokeError){
-        console.error('No se pudo revocar el enlace tras fallar el correo:',revokeError);
-      }
-    }
-    const detail=err instanceof TypeError
-      ? 'No se pudo conectar con el relay SMTP local. Comprueba que npm run dev muestra el servicio en el puerto 10061.'
-      : err.message;
-    toast(detail);
+    toast(err.message || 'No se pudo enviar el correo.');
     console.error('Error de envío:',err);
+    await loadLinks().catch(()=>{});
   }finally{
     button.disabled=false;
     button.textContent='Generar enlace y enviar';
