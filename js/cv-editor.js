@@ -35,7 +35,7 @@ async function api(path, options = {}) {
   }
   const isJson = (response.headers.get("content-type") || "").includes("application/json");
   const payload = isJson ? await response.json() : await response.text();
-  if (!response.ok) throw new Error(payload?.detail || payload?.error || "Error inesperado");
+  if (!response.ok) throw new Error(payload?.error || "Error inesperado");
   return payload;
 }
 
@@ -105,23 +105,69 @@ async function publish() {
 }
 
 async function exportPdf() {
+  if (!state.model) return;
+
+  setStatus("Generando PDF…");
   try {
-    const html = await api("/api/cv-content/render", {
+    // La exportación usa el mismo motor PDF que "Publicar en Documento".
+    // Evitamos window.print(), que puede añadir fecha, título, URL y numeración.
+    const isLocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+
+    let html = null;
+    if (isLocal) {
+      html = await api("/api/cv-content/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: state.model, mode: "print" })
+      });
+    }
+
+    const pdfEndpoint = isLocal
+      ? "http://127.0.0.1:10062/render-pdf"
+      : "/api/cv-content/pdf";
+
+    const response = await fetch(pdfEndpoint, {
       method: "POST",
+      credentials: isLocal ? "omit" : "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: state.model, mode: "print" })
+      body: JSON.stringify(isLocal ? { html } : { model: state.model })
     });
-    const win = window.open("", "_blank");
-    if (!win) return toast("Permite las ventanas emergentes para exportar el PDF.");
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.document.title = (state.model.meta.pdfFileName || "CV").replace(/\.pdf$/i, "");
-    setTimeout(() => { win.focus(); win.print(); }, 400);
-    return win;
+
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      let message = "No se pudo generar el PDF.";
+      try {
+        if (contentType.includes("application/json")) {
+          const data = await response.json();
+          message = data?.error || message;
+        } else {
+          const text = await response.text();
+          if (text) message = text;
+        }
+      } catch {}
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    if (!blob.type.includes("pdf") && blob.size < 5) {
+      throw new Error("La respuesta del servidor no contiene un PDF válido.");
+    }
+
+    const fileName = state.model.meta?.pdfFileName || "CV_Miguel_Angel_Carriazo.pdf";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+    setStatus("PDF generado");
+    toast("PDF generado y descargado");
   } catch (error) {
+    setStatus(`No se pudo exportar: ${error.message}`);
     toast(`No se pudo exportar: ${error.message}`);
-    return null;
   }
 }
 
@@ -163,7 +209,7 @@ async function publishToDocument() {
       method: "POST",
       credentials: isLocal ? "omit" : "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ html })
+      body: JSON.stringify(isLocal ? { html } : { model: state.model })
     });
     if (!renderResponse.ok) {
       const detail = await renderResponse.text().catch(() => "");
@@ -193,7 +239,7 @@ async function publishToDocument() {
     });
     const uploadPayload = await uploadResponse.json().catch(() => ({}));
     if (!uploadResponse.ok) {
-      throw new Error(uploadPayload.detail || uploadPayload.error || "No se pudo registrar el PDF en Documento.");
+      throw new Error(uploadPayload.error || "No se pudo registrar el PDF en Documento.");
     }
 
     const versionInput = document.querySelector("#cv-version-input");
