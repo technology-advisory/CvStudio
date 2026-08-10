@@ -15,7 +15,9 @@
   <link rel="stylesheet" href="/css/cv-editor.css">
 </head>
 <body>
-  <aside class="sidebar">
+  <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Abrir menú" aria-controls="app-sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
+  <div class="mobile-menu-backdrop" id="mobile-menu-backdrop" hidden></div>
+  <aside class="sidebar" id="app-sidebar">
     <a class="brand" href="/app.html" aria-label="OpenTrust CV Studio">
       <span class="brand-mark">OT</span>
       <span><strong>OpenTrust Group</strong><small>CV STUDIO</small></span>
@@ -46,14 +48,26 @@
             <label class="field">Nombre del destinatario <small>Opcional</small><input id="recipient-name" type="text" maxlength="80" placeholder="Nombre"></label>
           </div>
 
-          <fieldset class="template-options">
-            <legend>Plantilla del mensaje</legend>
-            <label><input type="radio" name="mail-template" value="selection" checked><span><strong>Proceso de selección</strong><small>Directa, profesional y orientada a recruiters.</small></span></label>
-            <label><input type="radio" name="mail-template" value="executive"><span><strong>Perfil ejecutivo</strong><small>Más sénior y centrada en gobierno y liderazgo.</small></span></label>
+          <div class="template-heading">
+            <div><strong>Plantilla del mensaje</strong><small>Selecciona una plantilla o personalízala y guárdala para futuros envíos.</small></div>
+            <div class="template-actions">
+              <button class="secondary compact" id="edit-mail-template" type="button">Editar plantilla</button>
+              <button class="primary compact hidden" id="save-mail-template" type="button">Guardar plantilla</button>
+              <button class="secondary compact hidden" id="cancel-mail-template" type="button">Cancelar</button>
+            </div>
+          </div>
+          <fieldset class="template-options" id="template-options">
+            <legend class="sr-only">Plantilla del mensaje</legend>
+            <label><input type="radio" name="mail-template" value="selection" checked><span><strong data-template-name="selection">Proceso de selección</strong><small data-template-description="selection">Directa, profesional y orientada a recruiters.</small></span></label>
+            <label><input type="radio" name="mail-template" value="executive"><span><strong data-template-name="executive">Perfil ejecutivo</strong><small data-template-description="executive">Más sénior y centrada en gobierno y liderazgo.</small></span></label>
           </fieldset>
 
-          <label class="field">Asunto<input id="mail-subject" type="text" maxlength="160" required></label>
-          <label class="field">Mensaje<textarea id="mail-message" maxlength="3000" rows="10" required></textarea></label>
+          <div class="template-edit-grid hidden" id="template-edit-grid">
+            <label class="field">Nombre de plantilla<input id="template-name" type="text" maxlength="80"></label>
+            <label class="field">Descripción<input id="template-description" type="text" maxlength="180"></label>
+          </div>
+          <label class="field">Asunto<input id="mail-subject" type="text" maxlength="160" required readonly></label>
+          <label class="field">Mensaje<textarea id="mail-message" maxlength="3000" rows="10" required readonly></textarea></label>
 
           <fieldset class="expiry-options">
             <legend>Caducidad del enlace</legend>
@@ -185,7 +199,7 @@
 
         <div class="editor-guidance">
           <strong>Formato</strong>
-          <span>Escribe **así** para poner una palabra en negrita, o selecciona el texto y pulsa <b>B</b>. También puedes hacer clic directamente sobre cualquier texto de la vista previa (a la derecha) y editarlo ahí mismo — al salir del campo, el panel de la izquierda se actualiza solo. Solo el contacto de la cabecera no es editable desde la vista previa; usa el panel para eso. El borrador se guarda solo cada pocos segundos. «Guardar versión con nombre» deja un punto en el historial de contenido. «Publicar en Documento» guarda la versión del contenido y te lleva al módulo Documento para gestionarla. «Exportar PDF» abre la ventana de impresión. Antes de guardar, entra en «Más ajustes» y desactiva «Encabezados y pies de página» para que no aparezcan fecha, nombre del documento, about:blank ni numeración de páginas.</span>
+          <span>Escribe **así** para poner una palabra en negrita, o selecciona el texto y pulsa <b>B</b>. También puedes hacer clic directamente sobre cualquier texto de la vista previa (a la derecha) y editarlo ahí mismo — al salir del campo, el panel de la izquierda se actualiza solo. Solo el contacto de la cabecera no es editable desde la vista previa; usa el panel para eso. El borrador se guarda solo cada pocos segundos. «Guardar versión con nombre» deja un punto en el historial de contenido. «Publicar en Documento» guarda la versión del contenido y te lleva al módulo Documento para gestionarla. «Exportar PDF» es la única acción que abre la ventana de impresión.</span>
         </div>
 
         <div class="cv-workspace">
