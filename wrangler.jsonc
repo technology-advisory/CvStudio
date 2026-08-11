@@ -5,6 +5,9 @@
 
   "main": "src/worker.js",
 
+  "workers_dev": false,
+  "preview_urls": false,
+
   "compatibility_date": "2026-08-06",
 
   "dev": {
@@ -14,12 +17,26 @@
   "assets": {
     "directory": ".dev-static",
     "binding": "ASSETS",
-    "not_found_handling": "none"
+    "not_found_handling": "none",
+    "run_worker_first": true
   },
 
   "browser": {
     "binding": "BROWSER"
   },
+
+  "ratelimits": [
+    {
+      "name": "SEND_RATE_LIMITER",
+      "namespace_id": "13001",
+      "simple": { "limit": 10, "period": 60 }
+    },
+    {
+      "name": "PDF_RATE_LIMITER",
+      "namespace_id": "13002",
+      "simple": { "limit": 5, "period": 60 }
+    }
+  ],
 
   "d1_databases": [
     {
@@ -52,9 +69,7 @@
     "SMTP_SECURITY": "starttls"
   }
 
-  // No hay autenticación interna.
-  // La protección de producción se realizará mediante Cloudflare Access.
-  //
-  // Los secretos SMTP se configuran como secrets del Worker y nunca
-  // se versionan en GitHub.
+  // Defensa en profundidad: Cloudflare Access en perímetro + validación en Worker.
+  // Para JWT criptográfico completo configura ACCESS_TEAM_DOMAIN y ACCESS_AUD.
+  // Los secretos SMTP se configuran como secrets del Worker y nunca se versionan.
 }

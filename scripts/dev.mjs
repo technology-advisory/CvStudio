@@ -84,7 +84,7 @@ function prepareStaticAssets({ clean = false } = {}) {
   copyOptionalDirectory("css");
   copyOptionalDirectory("js");
   copyOptionalDirectory("assets");
-  copyOptionalDirectory("templates");
+  fs.writeFileSync(path.join(staticDir, ".assetsignore"), "templates\n*.map\n*.md\n.DS_Store\nThumbs.db\n", "utf8");
 
   console.log("[dev] Recursos web preparados en .dev-static");
 }

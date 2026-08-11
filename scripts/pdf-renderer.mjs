@@ -8,16 +8,27 @@ const PORT = Number(process.env.CV_PDF_RENDERER_PORT || 10062);
 const MAX_BODY = 8 * 1024 * 1024;
 
 const server = http.createServer(async (req, res) => {
-  setCors(res);
+  const host = String(req.headers.host || "").toLowerCase();
+  const origin = String(req.headers.origin || "");
+  const allowedHosts = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
+  const allowedOrigins = new Set(["http://127.0.0.1:10060", "http://localhost:10060"]);
+  if (!allowedHosts.has(host)) return json(res, 403, { error: "Host no permitido" });
   if (req.method === "OPTIONS") {
+    if (!allowedOrigins.has(origin)) return json(res, 403, { error: "Origen no permitido" });
+    setCors(res, origin);
     res.writeHead(204);
     return res.end();
   }
+  setCors(res, allowedOrigins.has(origin) ? origin : "");
   if (req.method === "GET" && req.url === "/health") {
     return json(res, 200, { ok: true, browser: findBrowser() });
   }
   if (req.method !== "POST" || req.url !== "/render-pdf") {
     return json(res, 404, { error: "Not found" });
+  }
+  if (!allowedOrigins.has(origin)) return json(res, 403, { error: "Origen no permitido" });
+  if (!String(req.headers["content-type"] || "").toLowerCase().startsWith("application/json")) {
+    return json(res, 415, { error: "Content-Type no permitido" });
   }
 
   try {
@@ -127,8 +138,8 @@ function readBody(req) {
   });
 }
 
-function setCors(res) {
-  res.setHeader("access-control-allow-origin", "http://127.0.0.1:10060");
+function setCors(res, origin) {
+  if (origin) res.setHeader("access-control-allow-origin", origin);
   res.setHeader("access-control-allow-methods", "POST, GET, OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type");
   res.setHeader("cache-control", "no-store");

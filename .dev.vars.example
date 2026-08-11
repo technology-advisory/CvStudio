@@ -5,9 +5,14 @@
 SMTP_HOST=smtppro.zoho.eu
 SMTP_PORT=587
 SMTP_SECURITY=starttls
-SMTP_USER=macarriazo@technology-advisory.es
+SMTP_USER=usuario@tu-dominio.example
 SMTP_PASSWORD=CAMBIAR_POR_PASSWORD_O_APP_PASSWORD_DE_ZOHO
-SMTP_FROM=macarriazo@opentrust.group
+SMTP_FROM=usuario@tu-dominio.example
 SMTP_FROM_NAME=Miguel Ángel Carriazo · OpenTrust Group
-SMTP_REPLY_TO=macarriazo@opentrust.group
-ALERT_EMAIL_TO=macarriazo@opentrust.group
+SMTP_REPLY_TO=usuario@tu-dominio.example
+ALERT_EMAIL_TO=usuario@tu-dominio.example
+
+# Seguridad Cloudflare Access (PRO; opcional en local)
+ADMIN_EMAILS=tu-email-autorizado@example.com
+ACCESS_TEAM_DOMAIN=tu-equipo.cloudflareaccess.com
+ACCESS_AUD=tu-audience-tag-de-access

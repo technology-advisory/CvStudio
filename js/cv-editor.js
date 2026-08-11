@@ -109,8 +109,9 @@ async function exportPdf() {
 
   setStatus("Generando PDF…");
   try {
-    // La exportación usa el mismo motor PDF que "Publicar en Documento".
-    // Evitamos window.print(), que puede añadir fecha, título, URL y numeración.
+    // Usar SIEMPRE el generador PDF de CV Studio.
+    // No usar window.print(): el diálogo de impresión del navegador
+    // puede insertar fecha, título, URL/about:blank y número de página.
     const isLocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
 
     let html = null;
@@ -134,37 +135,27 @@ async function exportPdf() {
     });
 
     if (!response.ok) {
-      const contentType = response.headers.get("content-type") || "";
-      let message = "No se pudo generar el PDF.";
-      try {
-        if (contentType.includes("application/json")) {
-          const data = await response.json();
-          message = data?.error || message;
-        } else {
-          const text = await response.text();
-          if (text) message = text;
-        }
-      } catch {}
-      throw new Error(message);
+      const detail = await response.text().catch(() => "");
+      throw new Error(detail || "No se pudo generar el PDF.");
     }
 
-    const blob = await response.blob();
-    if (!blob.type.includes("pdf") && blob.size < 5) {
-      throw new Error("La respuesta del servidor no contiene un PDF válido.");
-    }
+    const pdfBlob = await response.blob();
+    const bytes = new Uint8Array(await pdfBlob.slice(0, 5).arrayBuffer());
+    const signature = String.fromCharCode(...bytes);
+    if (signature !== "%PDF-") throw new Error("El servidor no devolvió un PDF válido.");
 
     const fileName = state.model.meta?.pdfFileName || "CV_Miguel_Angel_Carriazo.pdf";
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(pdfBlob);
     const link = document.createElement("a");
     link.href = url;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
 
     setStatus("PDF generado");
-    toast("PDF generado y descargado");
+    toast("PDF generado sin cabeceras ni pies del navegador");
   } catch (error) {
     setStatus(`No se pudo exportar: ${error.message}`);
     toast(`No se pudo exportar: ${error.message}`);

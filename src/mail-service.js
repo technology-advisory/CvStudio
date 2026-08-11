@@ -236,7 +236,7 @@ function buildHtml(config, payload) {
 <div style="margin-top:12px;font-size:11px;line-height:1.5;color:#40567a"><a href="https://opentrust.group" style="color:#0d7188;text-decoration:none;font-weight:700">opentrust.group</a><span style="padding:0 9px;color:#a6b0bf">|</span><a href="https://www.linkedin.com/in/macarriazo" style="color:#0d7188;text-decoration:none;font-weight:700">LinkedIn</a></div>
 </td></tr></table>
 </td></tr>
-<tr><td style="padding:18px 34px 28px"><div style="border-top:1px solid #e2e8ec;padding-top:18px;color:#7a8793;font-size:11px;line-height:1.6">Este mensaje contiene un enlace personal y temporal. Si no esperabas recibirlo, puedes ignorarlo. No se almacena la dirección del destinatario en el portal.</div></td></tr>
+<tr><td style="padding:18px 34px 28px"><div style="border-top:1px solid #e2e8ec;padding-top:18px;color:#7a8793;font-size:11px;line-height:1.6">Este mensaje contiene un enlace personal y temporal. Si no esperabas recibirlo, puedes ignorarlo. El destinatario y los datos técnicos de descarga se registran temporalmente con fines de seguridad y trazabilidad, sujetos a la política de retención de CV Studio.</div></td></tr>
 <tr><td style="background:#f7f9fa;padding:14px 28px;text-align:center;color:#778592;font-size:11px">opentrust.group · ${escapeHtml(config.replyTo)}</td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -244,7 +244,7 @@ function buildHtml(config, payload) {
 function buildText(config, payload) {
   const greeting = payload.recipientName ? `Hola, ${payload.recipientName}:` : "Hola:";
   const downloads = Number(payload.maxDownloads || 1);
-  return `${greeting}\n\n${payload.message || "Te envío un acceso privado y temporal a mi vida profesional completa."}\n\nConsultar vida profesional:\n${payload.url}\n\nDisponible hasta ${formatDate(payload.expiresAt)}. El enlace permite ${downloads} descarga${downloads === 1 ? "" : "s"}.\n\nUn saludo,\n\nMiguel Ángel Carriazo\nArquitectura de Soluciones · Infraestructura · Ciberseguridad · GRC\n${config.replyTo}\n\nOpenTrust Group\nTechnology Advisory · GRCREAL · FraudeDigital · CyberLibrary AI\nhttps://opentrust.group | https://www.linkedin.com/in/macarriazo\n\nContacto: ${config.replyTo}`;
+  return `${greeting}\n\n${payload.message || "Te envío un acceso privado y temporal a mi vida profesional completa."}\n\nConsultar vida profesional:\n${payload.url}\n\nDisponible hasta ${formatDate(payload.expiresAt)}. El enlace permite ${downloads} descarga${downloads === 1 ? "" : "s"}.\n\nUn saludo,\n\nMiguel Ángel Carriazo\nArquitectura de Soluciones · Infraestructura · Ciberseguridad · GRC\n${config.replyTo}\n\nOpenTrust Group\nTechnology Advisory · GRCREAL · FraudeDigital · CyberLibrary AI\nhttps://opentrust.group | https://www.linkedin.com/in/macarriazo\n\nContacto: ${config.replyTo}\n\nPrivacidad: el destinatario y los datos técnicos de descarga se registran temporalmente con fines de seguridad y trazabilidad.`;
 }
 
 function defaultSubject() {

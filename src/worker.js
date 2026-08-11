@@ -1,4 +1,7 @@
 import { buildEmailPreview, sendCvEmail } from "./mail-service.js";
+import { sanitizeModel } from "./cv-model.js";
+import { renderCvDocument } from "./cv-render.js";
+import { requireAdminAccess, verifyRequestOrigin, isLocalRequest } from "./access-auth.js";
 import {
   getDraft,
   saveDraft,
@@ -21,8 +24,22 @@ const CANONICAL_CV_NAME = "CV_Miguel_Angel_Carriazo.pdf";
 export default {
   async fetch(request, env) {
     try {
+      return secureResponse(await (async () => {
       const url = new URL(request.url);
       const path = url.pathname;
+
+      // Defensa en profundidad: todas las APIs administrativas requieren
+      // Cloudflare Access. En local se permite el flujo de desarrollo.
+      let admin = null;
+      if (path.startsWith("/api/")) {
+        admin = await requireAdminAccess(request, env);
+        verifyRequestOrigin(request, env);
+      }
+
+      // El panel administrativo requiere Access también a nivel Worker.
+      if (path === "/app.html" || path === "/dashboard" || path === "/dashboard/") {
+        await requireAdminAccess(request, env);
+      }
 
       // Compatibilidad con la antigua URL de login. La portada pública vive en /.
       if (path === "/login.html") return Response.redirect(new URL("/", url), 308);
@@ -35,7 +52,7 @@ export default {
       }
 
       if (path === "/api/health" && request.method === "GET") {
-        return json({ ok: true, app: env.APP_NAME, localMode: env.LOCAL_MODE === "true" });
+        return json({ ok: true });
       }
 
       if (path === "/api/cv" && request.method === "GET") return await getCurrentCv(env);
@@ -67,7 +84,7 @@ export default {
       if (path === "/api/cv-content" && request.method === "PUT") return await saveDraft(request, env);
       if (path === "/api/cv-content/reset" && request.method === "POST") return await resetDraft(env);
       if (path === "/api/cv-content/render" && request.method === "POST") return await renderPreview(request);
-      if (path === "/api/cv-content/pdf" && request.method === "POST") return await renderPdfWithBrowserRun(request, env);
+      if (path === "/api/cv-content/pdf" && request.method === "POST") { await enforceRateLimit(env.PDF_RATE_LIMITER, admin?.email || "admin", "pdf"); return await renderPdfWithBrowserRun(request, env); }
       if (path === "/api/cv-content/publish" && request.method === "POST") return await publishDraft(request, env);
       if (path === "/api/cv-content/versions" && request.method === "GET") return await listContentVersions(env);
 
@@ -85,7 +102,7 @@ export default {
       const mailTemplateMatch = path.match(/^\/api\/mail-templates\/([a-z0-9_-]+)$/);
       if (mailTemplateMatch && request.method === "PUT") return await updateMailTemplate(request, env, mailTemplateMatch[1]);
 
-      if (path === "/api/send-cv" && request.method === "POST") return await createAndSend(request, env, publicBaseUrl(env, url.origin));
+      if (path === "/api/send-cv" && request.method === "POST") { await enforceRateLimit(env.SEND_RATE_LIMITER, admin?.email || "admin", "send"); return await createAndSend(request, env, publicBaseUrl(env, url.origin)); }
 
       const sentMatch = path.match(/^\/api\/links\/(\d+)\/sent$/);
       if (sentMatch && request.method === "POST") return await markLinkSent(request, env, Number(sentMatch[1]));
@@ -99,14 +116,18 @@ export default {
       if (path === "/api/links/revoke-all" && request.method === "POST") return await revokeAllActiveLinks(env);
       if (path === "/api/links/purge" && request.method === "POST") return await purgeOldLinks(request, env);
 
+      const downloadFileMatch = path.match(/^\/download\/([A-Za-z0-9_-]{20,})\/file$/);
+      if (downloadFileMatch && request.method === "GET") return await consumeDownload(request, env, downloadFileMatch[1]);
       const downloadMatch = path.match(/^\/download\/([A-Za-z0-9_-]{20,})$/);
-      if (downloadMatch && request.method === "GET") return await consumeDownload(request, env, downloadMatch[1]);
+      if (downloadMatch && request.method === "GET") return await showDownloadLanding(request, env, downloadMatch[1]);
 
+      if (path.startsWith("/api/")) return json({ error: "No encontrado" }, 404);
       return await env.ASSETS.fetch(request);
+      })(), request);
     } catch (error) {
       console.error(error);
       const status = Number(error?.status) || 500;
-      return json({ error: status >= 500 ? "Error interno" : error.message, detail: error instanceof Error ? error.message : String(error) }, status);
+      return secureResponse(json({ error: status >= 500 ? "Error interno" : error.message }, status), request);
     }
   },
 
@@ -125,55 +146,33 @@ async function renderPdfWithBrowserRun(request, env) {
     throw httpError("Browser Run no está configurado en este Worker.", 503);
   }
 
-  let payload;
-  try {
-    payload = await request.json();
-  } catch {
-    throw httpError("Petición JSON inválida.", 400);
-  }
-
-  const html = String(payload?.html || "");
-  if (!html.trim()) throw httpError("Falta el HTML a renderizar.", 400);
-  if (new TextEncoder().encode(html).byteLength > 8 * 1024 * 1024) {
+  const payload = await request.json().catch(() => null);
+  if (!payload || typeof payload !== "object") throw httpError("Petición JSON inválida.", 400);
+  const model = sanitizeModel(payload.model ?? payload);
+  const html = renderCvDocument(model, "print");
+  if (new TextEncoder().encode(html).byteLength > 2 * 1024 * 1024) {
     throw httpError("El documento es demasiado grande para generar el PDF.", 413);
   }
 
   const result = await env.BROWSER.quickAction("pdf", {
     html,
     pdfOptions: {
-      format: "a4",
-      printBackground: true,
-      preferCSSPageSize: true,
-      displayHeaderFooter: false,
-      margin: {
-        top: "0",
-        right: "0",
-        bottom: "0",
-        left: "0"
-      }
+      format: "a4", printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false,
+      margin: { top: "0", right: "0", bottom: "0", left: "0" }
     }
   });
-
   if (!result.ok) {
-    const detail = await result.text().catch(() => "");
-    throw httpError(detail || `Browser Run devolvió HTTP ${result.status}.`, 502);
+    console.error("Browser Run PDF failed", result.status, await result.text().catch(() => ""));
+    throw httpError("No se pudo generar el PDF.", 502);
   }
-
   const pdf = await result.arrayBuffer();
   const signature = new Uint8Array(pdf.slice(0, 5));
-  const isPdf = signature.length === 5 &&
-    signature[0] === 0x25 && signature[1] === 0x50 && signature[2] === 0x44 &&
-    signature[3] === 0x46 && signature[4] === 0x2d;
-  if (!isPdf) throw httpError("Browser Run no devolvió un PDF válido.", 502);
-
-  return new Response(pdf, {
-    status: 200,
-    headers: {
-      "content-type": "application/pdf",
-      "cache-control": "no-store",
-      "content-disposition": "inline; filename=CV_Miguel_Angel_Carriazo.pdf"
-    }
-  });
+  const isPdf = signature.length === 5 && signature[0] === 0x25 && signature[1] === 0x50 && signature[2] === 0x44 && signature[3] === 0x46 && signature[4] === 0x2d;
+  if (!isPdf) throw httpError("No se pudo generar un PDF válido.", 502);
+  return secureResponse(new Response(pdf, { status: 200, headers: {
+    "content-type": "application/pdf", "cache-control": "no-store",
+    "content-disposition": "inline; filename=CV_Miguel_Angel_Carriazo.pdf"
+  }}), request);
 }
 
 async function getCurrentCv(env) {
@@ -282,7 +281,7 @@ async function serveCurrentCv(env, inline) {
   headers.set("content-type", "application/pdf");
   headers.set("content-disposition", `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(fileName)}`);
   headers.set("cache-control", "private, no-store");
-  return new Response(object.body, { headers });
+  return secureResponse(new Response(object.body, { headers }), request);
 }
 
 /** Historial de versiones subidas (activa e inactivas), sin las eliminadas. */
@@ -337,7 +336,7 @@ async function downloadCvVersion(env, id, inline) {
   headers.set("content-type", "application/pdf");
   headers.set("content-disposition", `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(row.file_name)}`);
   headers.set("cache-control", "private, no-store");
-  return new Response(object.body, { headers });
+  return secureResponse(new Response(object.body, { headers }), request);
 }
 
 
@@ -400,8 +399,7 @@ async function createAndSend(request, env, origin) {
       .bind(new Date().toISOString(), result.id).run();
 
     return json({
-      error: "No se pudo enviar el correo. El enlace generado se ha revocado automáticamente.",
-      detail: error instanceof Error ? error.message : String(error)
+      error: "No se pudo enviar el correo. El enlace generado se ha revocado automáticamente."
     }, 502);
   }
 
@@ -569,10 +567,10 @@ async function purgeOldLinks(request, env) {
   const days = Number(body.days);
   if (![7, 30, 90, 180, 365].includes(days)) throw httpError("Periodo de eliminación no válido.", 400);
   const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
-  // Limpieza administrativa: elimina cualquier enlace creado antes del corte,
-  // independientemente de su estado. Esto incluye enlaces todavía activos.
+  // La limpieza por antigüedad nunca destruye accesos que sigan activos.
+  // Para invalidarlos de forma masiva existe la acción explícita "Revocar todos".
   const candidates = await env.DB.prepare(`SELECT id FROM download_links
-    WHERE created_at <= ?`).bind(cutoff).all();
+    WHERE created_at <= ? AND status IN ('EXPIRED','USED','REVOKED')`).bind(cutoff).all();
   const ids = (candidates.results || []).map(row => Number(row.id)).filter(Number.isInteger);
   if (!ids.length) return json({ ok: true, deleted: 0, days, reason: 'NO_OLD_LINKS' });
   let deleted = 0;
@@ -586,6 +584,24 @@ async function purgeOldLinks(request, env) {
     deleted += Number(results?.[1]?.meta?.changes || 0);
   }
   return json({ ok: true, deleted, days });
+}
+
+async function showDownloadLanding(request, env, token) {
+  const tokenHash = await sha256Hex(new TextEncoder().encode(token));
+  const row = await env.DB.prepare(`SELECT l.id, l.status, l.expires_at, l.max_downloads, l.download_count
+    FROM download_links l WHERE l.token_hash = ?`).bind(tokenHash).first();
+  if (!row) return publicError("Enlace no válido", "El enlace no existe o ya no está disponible.", 404);
+  const now = new Date();
+  if (row.status === "REVOKED") return publicError("Enlace revocado", "Este enlace ha sido invalidado por el propietario.", 410);
+  if (new Date(row.expires_at) <= now) {
+    await env.DB.prepare("UPDATE download_links SET status = 'EXPIRED' WHERE id = ?").bind(row.id).run();
+    return publicError("Enlace caducado", "La fecha de validez de este enlace ha finalizado.", 410);
+  }
+  if (row.status === "USED" || row.download_count >= row.max_downloads) return publicError("Enlace utilizado", "Este enlace ya alcanzó su número máximo de descargas.", 410);
+  const days = Math.max(1, Number(env.RETENTION_DAYS) || 90);
+  const action = `/download/${encodeURIComponent(token)}/file`;
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Acceso privado · CV Studio</title><style>body{margin:0;font-family:Inter,Segoe UI,system-ui;background:#f4f7f9;color:#0a1728;min-height:100vh;display:grid;place-items:center}.card{width:min(680px,calc(100% - 32px));background:#fff;border:1px solid #dce6eb;border-radius:22px;padding:34px;box-sizing:border-box;box-shadow:0 22px 60px #06263b18}.brand{color:#0d7188;font-weight:800;letter-spacing:.08em;font-size:.78rem}h1{margin:.7rem 0 1rem}.muted{color:#5c6b79;line-height:1.65}.privacy{margin:24px 0;padding:18px;background:#f4f9fa;border-left:4px solid #0d7188;border-radius:10px;font-size:.9rem;line-height:1.6}.button{display:inline-block;background:#0d7188;color:white;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:9px}</style></head><body><main class="card"><div class="brand">OPENTRUST GROUP · CV STUDIO</div><h1>Acceso privado a la vida profesional</h1><p class="muted">Este enlace es personal, temporal y revocable. La descarga solo se contabiliza cuando pulses el botón.</p><div class="privacy"><strong>Información de privacidad y trazabilidad</strong><br>Para proteger el acceso y mantener trazabilidad, al descargar se registran la fecha y hora, la dirección IP, país/ciudad aproximados facilitados por Cloudflare y datos técnicos del navegador. Si el remitente indicó tu nombre o email, esos datos pueden asociarse al enlace. Los datos técnicos se eliminan y los datos identificativos del enlace se anonimizan conforme a la política de retención configurada (${days} días). Contacto: macarriazo@opentrust.group.</div><a class="button" href="${action}">Descargar CV</a></main></body></html>`;
+  return secureResponse(new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }), request);
 }
 
 async function consumeDownload(request, env, token) {
@@ -624,7 +640,7 @@ async function consumeDownload(request, env, token) {
   headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(row.file_name)}`);
   headers.set("cache-control", "private, no-store, max-age=0");
   headers.set("x-content-type-options", "nosniff");
-  return new Response(object.body, { headers });
+  return secureResponse(new Response(object.body, { headers }), request);
 }
 
 async function activeCv(env, cvType = "full") {
@@ -659,8 +675,30 @@ async function sha256Hex(data) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function enforceRateLimit(binding, actor, scope) {
+  if (!binding || typeof binding.limit !== "function") return;
+  const { success } = await binding.limit({ key: `${scope}:${actor}` });
+  if (!success) throw httpError("Demasiadas solicitudes. Inténtalo de nuevo en un minuto.", 429);
+}
+
+function secureResponse(response, request = null) {
+  const headers = new Headers(response.headers);
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("x-frame-options", "DENY");
+  headers.set("referrer-policy", "no-referrer");
+  headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  headers.set("cross-origin-opener-policy", "same-origin");
+  headers.set("cross-origin-resource-policy", "same-origin");
+  const local = request ? isLocalRequest(request) : false;
+  headers.set("content-security-policy", local
+    ? "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:10062 http://localhost:10062; frame-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  if (request && !local && new URL(request.url).protocol === "https:") headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function cleanText(value, max) {
-  return String(value).trim().replace(/[<>]/g, "").slice(0, max) || "Sin versión";
+  return String(value).trim().slice(0, max) || "Sin versión";
 }
 
 function validateEmail(value) {
@@ -676,7 +714,7 @@ function cleanOptionalEmail(value) {
 }
 
 function cleanOptionalText(value, max) {
-  return String(value || "").trim().replace(/[<>]/g, "").slice(0, max);
+  return String(value || "").trim().slice(0, max);
 }
 
 function httpError(message, status) {
@@ -686,7 +724,7 @@ function httpError(message, status) {
 }
 
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
+  return new Response(JSON.stringify(data), { status, headers: { ...JSON_HEADERS, "cache-control": "no-store", "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "no-referrer" } });
 }
 
 function publicError(title, message, status) {

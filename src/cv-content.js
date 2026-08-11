@@ -5,12 +5,9 @@
  * que guardas una "versión con nombre" queda un snapshot exacto del
  * contenido en ese momento, restaurable más adelante.
  *
- * La generación del PDF final es manual y deliberada: "Exportar PDF" abre
- * el diálogo de impresión del navegador con la maquetación exacta del
- * servidor, y desde "Documento" lo subes como versión activa. Así evitamos
- * depender de Browser Rendering (Cloudflare, función de pago que solo
- * funciona desplegada o con 'wrangler dev --remote') para poder editar y
- * publicar el CV en local sin fricción.
+ * La generación final usa el mismo modelo saneado: Edge/Chrome headless en
+ * desarrollo local y Browser Run en producción. El Worker nunca acepta HTML
+ * arbitrario para la generación PDF de producción.
  */
 
 import { cloneDefaultModel, sanitizeModel } from "./cv-model.js";
@@ -128,6 +125,16 @@ export async function restoreContentVersion(env, id) {
 export async function purgeDownloadEvents(env) {
   const days = Number(env.RETENTION_DAYS) || 90;
   const cutoff = new Date(Date.now() - days * 86400000).toISOString();
-  const result = await env.DB.prepare("DELETE FROM download_events WHERE downloaded_at < ?").bind(cutoff).run();
-  return { days, cutoff, deleted: result.meta?.changes ?? 0 };
+  const results = await env.DB.batch([
+    env.DB.prepare("DELETE FROM download_events WHERE downloaded_at < ?").bind(cutoff),
+    env.DB.prepare(`UPDATE download_links
+      SET recipient_email = NULL, recipient_name = NULL, email_subject = NULL
+      WHERE created_at < ? AND status IN ('EXPIRED','USED','REVOKED')
+        AND (recipient_email IS NOT NULL OR recipient_name IS NOT NULL OR email_subject IS NOT NULL)`).bind(cutoff)
+  ]);
+  return {
+    days, cutoff,
+    deletedEvents: Number(results?.[0]?.meta?.changes || 0),
+    anonymizedLinks: Number(results?.[1]?.meta?.changes || 0)
+  };
 }

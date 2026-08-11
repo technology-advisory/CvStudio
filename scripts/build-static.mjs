@@ -13,7 +13,8 @@ for (const file of ["favicon.ico", "favicon-16x16.png", "favicon-32x32.png", "ap
   const src = path.join(root, file);
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(output, file));
 }
-for (const dir of ["css","js","assets","templates"]) {
+for (const dir of ["css","js","assets"]) {
   const src=path.join(root,dir); if(fs.existsSync(src)) fs.cpSync(src,path.join(output,dir),{recursive:true,force:true});
 }
+fs.writeFileSync(path.join(output, ".assetsignore"), "templates\n*.map\n*.md\n.DS_Store\nThumbs.db\n", "utf8");
 console.log("[build] Recursos web preparados en .dev-static");

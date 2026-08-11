@@ -1,14 +1,35 @@
+# Dependencias y artefactos
 node_modules/
 .wrangler/
 .dev-static/
+dist/
+bak/
+tmp/
+
+# Secretos — nunca versionar
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
 .env
 .env.*
-*.log
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Paquetes y volcados
 *.zip
-bak/
-storage-local/*.pdf
+*.tar
+*.tar.gz
+*.log
+*.bak
+
+# Almacenamiento local
+storage-local/*
+!storage-local/.gitkeep
+
+# Editor y sistema operativo
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
