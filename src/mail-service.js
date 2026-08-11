@@ -211,7 +211,6 @@ function buildHtml(config, payload) {
   const greeting = recipientName ? `Hola, ${recipientName}:` : "Hola:";
   const message = escapeHtml(payload.message || "Te envío un acceso privado y temporal a mi vida profesional completa.").replace(/\n/g, "<br>");
   const expiry = formatDate(payload.expiresAt);
-  const downloads = Number(payload.maxDownloads || 1);
 
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(payload.subject || defaultSubject())}</title></head>
@@ -221,7 +220,7 @@ function buildHtml(config, payload) {
 <tr><td style="background:#071526;padding:22px 28px"><table role="presentation" width="100%"><tr><td style="color:#ffffff;font-size:18px;font-weight:700">OpenTrust Group</td><td align="right" style="color:#74c7d5;font-size:11px;letter-spacing:1.5px;font-weight:700">VIDA PROFESIONAL</td></tr></table></td></tr>
 <tr><td style="padding:34px 34px 18px"><div style="color:#0d7188;font-size:12px;font-weight:700;letter-spacing:1.2px;margin-bottom:10px">ACCESO PRIVADO</div><h1 style="margin:0 0 20px;font-size:26px;line-height:1.25;color:#102033">Miguel Ángel Carriazo Álvarez</h1><p style="margin:0 0 18px;font-size:16px;line-height:1.6">${greeting}</p><p style="margin:0 0 26px;font-size:15px;line-height:1.7;color:#405064">${message}</p>
 <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#0d7188;border-radius:8px"><a href="${escapeAttr(payload.url)}" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700">Consultar vida profesional</a></td></tr></table>
-<div style="margin-top:26px;padding:16px 18px;background:#f3f8f9;border-left:4px solid #0d7188;border-radius:6px;color:#4e5d6c;font-size:13px;line-height:1.6"><strong style="color:#102033">Acceso temporal y protegido</strong><br>Disponible hasta ${expiry}. El enlace permite ${downloads} descarga${downloads === 1 ? "" : "s"}.</div>
+<div style="margin-top:26px;padding:16px 18px;background:#f3f8f9;border-left:4px solid #0d7188;border-radius:6px;color:#4e5d6c;font-size:13px;line-height:1.6"><strong style="color:#102033">Acceso temporal y protegido</strong><br>Disponible hasta ${expiry}. Puedes acceder más de una vez mientras el enlace siga vigente.</div>
 <p style="margin:28px 0 12px;font-size:14px;line-height:1.65;color:#526275;font-weight:600">Un saludo,</p>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
 <td width="4" style="width:4px;background:#0d7188;font-size:1px;line-height:1px">&nbsp;</td>
@@ -243,8 +242,7 @@ function buildHtml(config, payload) {
 
 function buildText(config, payload) {
   const greeting = payload.recipientName ? `Hola, ${payload.recipientName}:` : "Hola:";
-  const downloads = Number(payload.maxDownloads || 1);
-  return `${greeting}\n\n${payload.message || "Te envío un acceso privado y temporal a mi vida profesional completa."}\n\nConsultar vida profesional:\n${payload.url}\n\nDisponible hasta ${formatDate(payload.expiresAt)}. El enlace permite ${downloads} descarga${downloads === 1 ? "" : "s"}.\n\nUn saludo,\n\nMiguel Ángel Carriazo\nArquitectura de Soluciones · Infraestructura · Ciberseguridad · GRC\n${config.replyTo}\n\nOpenTrust Group\nTechnology Advisory · GRCREAL · FraudeDigital · CyberLibrary AI\nhttps://opentrust.group | https://www.linkedin.com/in/macarriazo\n\nContacto: ${config.replyTo}\n\nPrivacidad: el destinatario y los datos técnicos de descarga se registran temporalmente con fines de seguridad y trazabilidad.`;
+  return `${greeting}\n\n${payload.message || "Te envío un acceso privado y temporal a mi vida profesional completa."}\n\nConsultar vida profesional:\n${payload.url}\n\nDisponible hasta ${formatDate(payload.expiresAt)}. Puedes acceder más de una vez mientras el enlace siga vigente.\n\nUn saludo,\n\nMiguel Ángel Carriazo\nArquitectura de Soluciones · Infraestructura · Ciberseguridad · GRC\n${config.replyTo}\n\nOpenTrust Group\nTechnology Advisory · GRCREAL · FraudeDigital · CyberLibrary AI\nhttps://opentrust.group | https://www.linkedin.com/in/macarriazo\n\nContacto: ${config.replyTo}\n\nPrivacidad: el destinatario y los datos técnicos de descarga se registran temporalmente con fines de seguridad y trazabilidad.`;
 }
 
 function defaultSubject() {

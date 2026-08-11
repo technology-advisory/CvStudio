@@ -77,8 +77,7 @@
             <label><input type="radio" name="expiry" value="custom"><span>Personalizada</span></label>
           </fieldset>
           <label class="field custom-date hidden" id="custom-date-wrap">Fecha y hora de caducidad<input type="datetime-local" id="custom-date"></label>
-          <label class="switch-row"><span><strong>Una única descarga</strong><small>El enlace se invalida después de descargar el PDF.</small></span><input type="checkbox" id="single-use" checked></label>
-          <label class="field hidden" id="downloads-wrap">Descargas permitidas<input id="max-downloads" type="number" min="1" max="20" value="5"></label>
+          <div class="privacy-warning"><strong>Acceso resistente a escáneres de correo</strong><span>El enlace permanece válido hasta su caducidad o revocación manual. Las comprobaciones automáticas de seguridad no lo consumen.</span></div>
           <div class="send-actions"><button class="secondary" id="preview-mail" type="button">Vista previa del correo</button><button class="primary" type="submit">Generar enlace y enviar</button></div>
         </form>
         <div id="generated" class="generated hidden" aria-live="polite">
@@ -91,13 +90,13 @@
     <section id="view-links" class="app-view" data-view-panel="links">
       <section class="stats" aria-label="Resumen de enlaces">
         <article><span>Activos</span><strong id="stat-active">0</strong></article>
-        <article><span>Utilizados</span><strong id="stat-used">0</strong></article>
+        <article><span>Accesos registrados</span><strong id="stat-used">0</strong></article>
         <article><span>Caducados</span><strong id="stat-expired">0</strong></article>
         <article><span>Revocados</span><strong id="stat-revoked">0</strong></article>
       </section>
       <article class="panel links-panel">
         <div class="panel-heading"><div><p class="eyebrow">CONTROL DE ACCESOS</p><h2>Enlaces generados</h2></div><button id="refresh" class="secondary" type="button">Actualizar</button></div>
-        <div class="filters" role="tablist"><button class="active" data-filter="ALL">Todos</button><button data-filter="ACTIVE">Activos</button><button data-filter="USED">Utilizados</button><button data-filter="EXPIRED">Caducados</button><button data-filter="REVOKED">Revocados</button></div>
+        <div class="filters" role="tablist"><button class="active" data-filter="ALL">Todos</button><button data-filter="ACTIVE">Activos</button><button data-filter="EXPIRED">Caducados</button><button data-filter="REVOKED">Revocados</button></div>
         <div class="links-toolbar">
           <div class="bulk-actions">
             <label class="select-all"><input id="select-all-links" type="checkbox"> <span>Seleccionar todo lo visible</span></label>
@@ -117,7 +116,7 @@
           </div>
         </div>
         <p class="retention-note">La limpieza por antigüedad elimina cualquier enlace cuya fecha de creación supere el plazo seleccionado, incluidos los activos. Usa “Revocar todos los activos” si solo quieres invalidarlos sin borrarlos.</p>
-        <div class="table-wrap"><table><thead><tr><th class="check-column"></th><th>Token</th><th>Creado</th><th>Caduca</th><th>Uso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="links-body"><tr><td colspan="7" class="empty">Cargando enlaces…</td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th class="check-column"></th><th>Token</th><th>Creado</th><th>Caduca</th><th>Accesos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="links-body"><tr><td colspan="7" class="empty">Cargando enlaces…</td></tr></tbody></table></div>
       </article>
     </section>
 
@@ -125,20 +124,27 @@
     <section id="view-statistics" class="app-view" data-view-panel="statistics">
       <section class="stats" aria-label="Resumen estadístico">
         <article><span>Correos enviados</span><strong id="stat-total-sent">0</strong></article>
-        <article><span>Descargas</span><strong id="stat-total-downloads">0</strong></article>
+        <article><span>Accesos registrados</span><strong id="stat-total-downloads">0</strong></article>
         <article><span>Enlaces activos</span><strong id="stat-active-statistics">0</strong></article>
         <article><span>Enlaces totales</span><strong id="stat-total-links">0</strong></article>
       </section>
 
       <article class="panel statistics-panel">
         <div class="panel-heading"><div><p class="eyebrow">HISTORIAL DE ENVÍOS</p><h2>Envíos realizados</h2><p class="panel-description">Destinatario, versión del PDF, fecha de envío, caducidad y uso del enlace.</p></div><button id="refresh-statistics" class="secondary" type="button">Actualizar</button></div>
-        <div class="table-wrap"><table class="statistics-table"><thead><tr><th>Destinatario</th><th>Documento</th><th>Enviado</th><th>Caduca</th><th>Descargas</th><th>Estado</th></tr></thead><tbody id="statistics-sends-body"><tr><td colspan="6" class="empty">Cargando envíos…</td></tr></tbody></table></div>
+        <div class="table-wrap"><table class="statistics-table"><thead><tr><th>Destinatario</th><th>Documento</th><th>Enviado</th><th>Caduca</th><th>Accesos</th><th>Estado</th></tr></thead><tbody id="statistics-sends-body"><tr><td colspan="6" class="empty">Cargando envíos…</td></tr></tbody></table></div>
       </article>
 
       <article class="panel statistics-panel">
-        <div class="panel-heading"><div><p class="eyebrow">TRAZABILIDAD DE DESCARGAS</p><h2>Descargas registradas</h2><p class="panel-description">Fecha y hora, IP, ubicación aproximada, destinatario asociado, versión y navegador.</p></div></div>
-        <div class="privacy-warning"><strong>Información personal y técnica</strong><span>La IP y el navegador se registran únicamente cuando la descarga se completa. Define una política de conservación antes de publicar el portal.</span></div>
-        <div class="table-wrap"><table class="statistics-table downloads-table"><thead><tr><th>Fecha y hora</th><th>IP / ubicación</th><th>Destinatario</th><th>Documento</th><th>Navegador</th></tr></thead><tbody id="statistics-downloads-body"><tr><td colspan="5" class="empty">Cargando descargas…</td></tr></tbody></table></div>
+        <div class="panel-heading"><div><p class="eyebrow">TRAZABILIDAD DE ACCESOS</p><h2>Accesos registrados</h2><p class="panel-description">Cada solicitud al enlace queda registrada sin consumirlo. La clasificación automática es orientativa y nunca bloquea una descarga.</p></div><button id="refresh-statistics-downloads" class="secondary" type="button">Actualizar</button></div>
+        <div class="privacy-warning"><strong>Información personal y técnica</strong><span>Se registran fecha/hora, IP, ubicación aproximada, ASN/organización y navegador. Un acceso puede proceder del destinatario, de un proxy o de un sistema automático de seguridad.</span></div>
+        <div class="links-toolbar">
+          <div class="bulk-actions">
+            <label class="select-all"><input id="select-all-download-events" type="checkbox"> <span>Seleccionar todo lo visible</span></label>
+            <button id="delete-selected-download-events" class="danger" type="button" disabled>Eliminar seleccionados</button>
+            <button id="delete-all-download-events" class="danger" type="button">Eliminar todas las estadísticas</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="statistics-table downloads-table"><thead><tr><th class="check-column"></th><th>Fecha y hora</th><th>IP / ubicación</th><th>Clasificación</th><th>Destinatario</th><th>Documento</th><th>Navegador</th></tr></thead><tbody id="statistics-downloads-body"><tr><td colspan="7" class="empty">Cargando accesos…</td></tr></tbody></table></div>
       </article>
     </section>
 

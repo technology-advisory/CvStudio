@@ -95,6 +95,10 @@ export default {
 
       if (path === "/api/links" && request.method === "GET") return await listLinks(env);
       if (path === "/api/statistics" && request.method === "GET") return await getStatistics(env);
+      if (path === "/api/statistics/downloads" && request.method === "DELETE") return await deleteAllDownloadEvents(env);
+      if (path === "/api/statistics/downloads/bulk-delete" && request.method === "POST") return await bulkDeleteDownloadEvents(request, env);
+      const downloadEventDeleteMatch = path.match(/^\/api\/statistics\/downloads\/(\d+)$/);
+      if (downloadEventDeleteMatch && request.method === "DELETE") return await deleteDownloadEvent(env, Number(downloadEventDeleteMatch[1]));
       if (path === "/api/links" && request.method === "POST") return await createLink(request, env, publicBaseUrl(env, url.origin));
       if (path === "/api/mail/preview" && request.method === "POST") return await previewMail(request, env, publicBaseUrl(env, url.origin));
       if (path === "/api/mail-templates" && request.method === "GET") return await listMailTemplates(env);
@@ -411,7 +415,7 @@ async function createAndSend(request, env, origin) {
 async function previewMail(request, env, origin) {
   const body = await request.json().catch(() => ({}));
   const expiresAt = body.expiresAt ? new Date(body.expiresAt).toISOString() : resolveExpiry(body);
-  const maxDownloads = Number(body.maxDownloads || (body.singleUse === false ? 5 : 1));
+  const maxDownloads = 0;
   const preview = buildEmailPreview(env, {
     recipientName: cleanOptionalText(body.recipientName, 80),
     subject: cleanOptionalText(body.subject, 160),
@@ -420,7 +424,7 @@ async function previewMail(request, env, origin) {
       ? body.url
       : `${origin}/download/ENLACE-SEGURO-DE-EJEMPLO`,
     expiresAt,
-    maxDownloads: Math.min(Math.max(maxDownloads, 1), 20)
+    maxDownloads
   });
   return json(preview);
 }
@@ -431,7 +435,9 @@ async function createLinkRecord(body, env, origin) {
   if (!current && !seeded) throw httpError("Sube primero un CV antes de generar enlaces.", 409);
 
   const expiresAt = resolveExpiry(body);
-  const maxDownloads = body.singleUse === false ? Math.min(Math.max(Number(body.maxDownloads || 5), 1), 20) : 1;
+  // 0 representa "sin límite por número de accesos". El enlace solo deja de ser válido
+  // por caducidad o revocación manual. Así un scanner de correo no consume el enlace.
+  const maxDownloads = 0;
   const token = randomToken(32);
   const tokenHash = await sha256Hex(new TextEncoder().encode(token));
   const tokenHint = `${token.slice(0, 5)}…${token.slice(-4)}`;
@@ -504,6 +510,7 @@ async function getStatistics(env) {
 
   const { results: downloads } = await env.DB.prepare(`SELECT
       e.id, e.downloaded_at, e.ip_address, e.country, e.city, e.user_agent,
+      e.asn, e.as_organization, e.classification, e.classification_reason,
       l.id AS link_id, l.token_hint, l.recipient_email, l.recipient_name,
       c.version AS cv_version, c.file_name AS cv_file_name
     FROM download_events e
@@ -514,16 +521,54 @@ async function getStatistics(env) {
   return json({ summary, sends, downloads });
 }
 
+async function deleteDownloadEvent(env, id) {
+  const result = await env.DB.prepare("DELETE FROM download_events WHERE id = ?").bind(id).run();
+  if (!result.meta.changes) return json({ error: "El registro no existe." }, 404);
+  return json({ ok: true, deleted: Number(result.meta.changes || 0) });
+}
+
+async function bulkDeleteDownloadEvents(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).map(Number).filter(Number.isInteger))].slice(0, 250);
+  if (!ids.length) throw httpError("Selecciona al menos un registro.", 400);
+  const placeholders = ids.map(() => "?").join(",");
+  const result = await env.DB.prepare(`DELETE FROM download_events WHERE id IN (${placeholders})`).bind(...ids).run();
+  return json({ ok: true, deleted: Number(result.meta.changes || 0) });
+}
+
+async function deleteAllDownloadEvents(env) {
+  const result = await env.DB.prepare("DELETE FROM download_events").run();
+  return json({ ok: true, deleted: Number(result.meta.changes || 0) });
+}
+
 function downloadMetadata(request) {
   const forwarded = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "";
   const ipAddress = forwarded.split(",")[0].trim() || null;
   const cf = request.cf || {};
-  return {
+  const event = {
     ipAddress,
     country: cleanOptionalText(cf.country || "", 80) || null,
     city: cleanOptionalText(cf.city || "", 120) || null,
-    userAgent: cleanOptionalText(request.headers.get("user-agent") || "", 500) || null
+    userAgent: cleanOptionalText(request.headers.get("user-agent") || "", 500) || null,
+    asn: Number.isFinite(Number(cf.asn)) ? Number(cf.asn) : null,
+    asOrganization: cleanOptionalText(cf.asOrganization || "", 160) || null
   };
+  return { ...event, ...classifyAccessEvent(event) };
+}
+
+function classifyAccessEvent(event) {
+  const ua = String(event.userAgent || "").toLowerCase();
+  const org = String(event.asOrganization || "").toLowerCase();
+  const uaSignals = ["bot", "crawler", "spider", "scanner", "headless", "safelinks", "urlscan", "proofpoint", "mimecast", "barracuda", "defender"];
+  const orgSignals = ["microsoft", "azure", "proofpoint", "mimecast", "barracuda", "zscaler", "forcepoint", "cloudflare", "amazon", "google cloud"];
+  const uaSignal = uaSignals.find(value => ua.includes(value));
+  const orgSignal = orgSignals.find(value => org.includes(value));
+  if (uaSignal || orgSignal) {
+    const reason = uaSignal ? `Señal técnica en User-Agent: ${uaSignal}` : `Infraestructura cloud/seguridad: ${event.asOrganization}`;
+    return { classification: "POSSIBLE_AUTOMATION", classificationReason: reason };
+  }
+  // No afirmamos que sea humano únicamente por no detectar un scanner.
+  return { classification: "UNDETERMINED", classificationReason: null };
 }
 
 async function revokeLink(env, id) {
@@ -601,21 +646,21 @@ async function consumeDownload(request, env, token) {
     await env.DB.prepare("UPDATE download_links SET status = 'EXPIRED' WHERE id = ?").bind(row.id).run();
     return publicError("Enlace caducado", "La fecha de validez de este enlace ha finalizado.", 410);
   }
-  if (row.status === "USED" || row.download_count >= row.max_downloads) return publicError("Enlace utilizado", "Este enlace ya alcanzó su número máximo de descargas.", 410);
-
+  // Los accesos no consumen el enlace. Incluso un enlace legado marcado USED se
+  // mantiene disponible mientras no haya caducado ni haya sido revocado.
   const object = await env.CV_BUCKET.get(row.r2_key);
   if (!object) return publicError("Documento no disponible", "El CV asociado no se encuentra en el almacenamiento.", 404);
 
-  const newCount = row.download_count + 1;
-  const newStatus = newCount >= row.max_downloads ? "USED" : "ACTIVE";
+  const newCount = Number(row.download_count || 0) + 1;
   const event = downloadMetadata(request);
   await env.DB.batch([
-    env.DB.prepare(`UPDATE download_links SET download_count = ?, status = ?, used_at = ? WHERE id = ?`)
-      .bind(newCount, newStatus, now.toISOString(), row.id),
+    env.DB.prepare(`UPDATE download_links SET download_count = ?, status = 'ACTIVE', used_at = ? WHERE id = ?`)
+      .bind(newCount, now.toISOString(), row.id),
     env.DB.prepare(`INSERT INTO download_events
-      (link_id, downloaded_at, ip_address, country, city, user_agent)
-      VALUES (?, ?, ?, ?, ?, ?)`)
-      .bind(row.id, now.toISOString(), event.ipAddress, event.country, event.city, event.userAgent)
+      (link_id, downloaded_at, ip_address, country, city, user_agent, asn, as_organization, classification, classification_reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(row.id, now.toISOString(), event.ipAddress, event.country, event.city, event.userAgent,
+        event.asn, event.asOrganization, event.classification, event.classificationReason)
   ]);
 
   const headers = new Headers();
