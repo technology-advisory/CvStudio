@@ -209,7 +209,7 @@ async function publishToDocument() {
     const pdfBlob = await renderResponse.blob();
 
     // 4) Subimos el PDF generado a la MISMA colección que muestra Documento,
-    // como Backup. Así aparece en «Versiones subidas» inmediatamente.
+    // como Primario. Así los nuevos enlaces de email apuntan al PDF limpio generado por CV Studio.
     const safeVersion = String(published.version || version)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -221,7 +221,7 @@ async function publishToDocument() {
     form.append("file", pdfFile);
     form.append("version", published.version || version);
     form.append("type", "full");
-    form.append("activate", "false");
+    form.append("activate", "true");
 
     const uploadResponse = await fetch("/api/cv", {
       method: "POST",
@@ -240,7 +240,7 @@ async function publishToDocument() {
       detail: { id: uploadPayload.id, version: published.version || version }
     }));
     setStatus(`Versión «${published.version || version}» publicada en Documento`);
-    toast("PDF publicado como Backup. Ya puedes ponerlo como primario.");
+    toast("PDF publicado como Primario. Los nuevos envíos usarán esta versión limpia.");
     location.hash = "document";
   } catch (error) {
     setStatus(`No se pudo publicar: ${error.message}`);
