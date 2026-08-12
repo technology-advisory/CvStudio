@@ -124,6 +124,7 @@ function renderBlocks(section, basePath) {
 }
 
 function renderProjects(section, basePath) {
+  const intro = section.intro ? `<div class="intro projects-intro"${ed(`${basePath}.intro`)}>${rich(section.intro)}</div>` : "";
   const perRow = section.columns || 4;
   const width = Math.floor(100 / perRow);
   let rows = "";
@@ -143,7 +144,7 @@ function renderProjects(section, basePath) {
     const padding = "<td></td>".repeat(perRow - Math.min(perRow, section.items.length - i));
     rows += `<tr>${cells}${padding}</tr>`;
   }
-  return `<table class="lay">${rows}</table>`;
+  return `${intro}<table class="lay">${rows}</table>`;
 }
 
 function renderSection(section, index) {

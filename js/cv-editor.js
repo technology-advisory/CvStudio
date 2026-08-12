@@ -23,6 +23,7 @@ export function initCvEditor() {
   if (!$("#cv-content-form")) return;
   bindToolbar();
   loadModel();
+  loadContentVersions();
 }
 
 /* ------------------------------------------------------------------ API --- */
@@ -72,16 +73,180 @@ async function saveDraft({ silent = false } = {}) {
   }
 }
 
+async function saveSafetySnapshot(reason = "cambio") {
+  if (!state.model) return null;
+  const stamp = new Date().toLocaleString("es-ES", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  });
+  const labels = {
+    import: "Backup antes de importar",
+    restore: "Backup antes de restaurar",
+    reset: "Backup antes de reset",
+    blank: "Backup antes de vaciar borrador"
+  };
+  const version = `${labels[reason] || "Backup automático"} · ${stamp}`.slice(0, 40);
+  const data = await api("/api/cv-content/publish", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ version, model: state.model })
+  });
+  await loadContentVersions({ silent: true });
+  return data;
+}
+
 async function resetModel() {
-  if (!confirm("¿Restaurar el contenido original? Se pierde el borrador guardado.")) return;
+  if (!confirm("¿Restaurar el contenido original? CV Studio guardará antes una copia de seguridad automática del borrador actual.")) return;
   try {
+    setStatus("Creando copia de seguridad…");
+    await saveSafetySnapshot("reset");
     const data = await api("/api/cv-content/reset", { method: "POST" });
     state.model = data.model;
+    state.dirty = false;
     renderForm();
     refreshPreview();
-    setStatus("Contenido original restaurado");
+    setStatus("Contenido original restaurado · copia anterior guardada");
+    toast("Contenido original restaurado. El borrador anterior quedó guardado como versión.");
   } catch (error) {
     setStatus(`No se pudo restaurar: ${error.message}`);
+  }
+}
+
+async function loadContentVersions({ silent = false } = {}) {
+  const select = $("#cv-version-select");
+  const restoreButton = $("#cv-restore-version");
+  const deleteButton = $("#cv-delete-version");
+  if (!select) return;
+  try {
+    const data = await api("/api/cv-content/versions");
+    const versions = Array.isArray(data.versions) ? data.versions : [];
+    const previous = select.value;
+    select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = versions.length ? "Selecciona una versión guardada" : "No hay versiones guardadas";
+    select.appendChild(placeholder);
+    versions.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = String(item.id);
+      option.textContent = `${item.version} · ${formatDate(item.created_at)}`;
+      select.appendChild(option);
+    });
+    if (versions.some((item) => String(item.id) === previous)) select.value = previous;
+    if (restoreButton) restoreButton.disabled = !select.value;
+    if (deleteButton) deleteButton.disabled = !select.value;
+    if (!silent && versions.length) toast(`${versions.length} versiones guardadas disponibles`);
+  } catch (error) {
+    select.innerHTML = '<option value="">No se pudo cargar el historial</option>';
+    if (restoreButton) restoreButton.disabled = true;
+    if (deleteButton) deleteButton.disabled = true;
+    if (!silent) setStatus(`No se pudo cargar el historial: ${error.message}`);
+  }
+}
+
+async function deleteNamedVersion() {
+  const select = $("#cv-version-select");
+  const id = Number(select?.value || 0);
+  if (!id) return toast("Selecciona primero una versión guardada.");
+  const label = select.options[select.selectedIndex]?.textContent || "la versión seleccionada";
+  if (!confirm(`¿Eliminar ${label}?\n\nSolo se elimina esta versión guardada. El borrador activo y los PDF publicados no se modifican.`)) return;
+  try {
+    setStatus("Eliminando versión guardada…");
+    await api(`/api/cv-content/versions/${id}`, { method: "DELETE" });
+    await loadContentVersions({ silent: true });
+    setStatus("Versión eliminada");
+    toast("Versión guardada eliminada. El borrador activo se conserva.");
+  } catch (error) {
+    setStatus(`No se pudo eliminar la versión: ${error.message}`);
+    alert(`No se pudo eliminar la versión.\n\n${error.message}`);
+  }
+}
+
+async function restoreNamedVersion() {
+  const select = $("#cv-version-select");
+  const id = Number(select?.value || 0);
+  if (!id) return toast("Selecciona primero una versión guardada.");
+  const label = select.options[select.selectedIndex]?.textContent || "la versión seleccionada";
+  if (!confirm(`¿Restaurar ${label} como borrador actual?\n\nAntes se guardará automáticamente una copia del borrador vigente.`)) return;
+  try {
+    setStatus("Guardando copia de seguridad y restaurando…");
+    await saveSafetySnapshot("restore");
+    const data = await api(`/api/cv-content/versions/${id}/restore`, { method: "POST" });
+    state.model = data.model;
+    state.dirty = false;
+    renderForm();
+    refreshPreview({ keepScroll: false });
+    setStatus(`Versión restaurada · ${formatDate(data.updatedAt)}`);
+    toast("Versión restaurada como borrador actual. El borrador anterior quedó guardado.");
+    await loadContentVersions({ silent: true });
+  } catch (error) {
+    setStatus(`No se pudo restaurar la versión: ${error.message}`);
+    alert(`No se pudo restaurar la versión.\n\n${error.message}`);
+  }
+}
+
+function blankModelFromCurrent(model) {
+  const blank = deepClone(model);
+
+  // Conservamos la estructura (tipos, secciones y número de elementos) para que
+  // el editor siga siendo utilizable y el importador legacy pueda mapear por posición.
+  blank.meta = {
+    ...(blank.meta || {}),
+    brandLead: blank.meta?.brandLead || "OpenTrust Group",
+    brandTail: blank.meta?.brandTail || "",
+    name: "",
+    role: "",
+    contact: [],
+    footer: "",
+    pdfFileName: blank.meta?.pdfFileName || "CV_Miguel_Angel_Carriazo.pdf"
+  };
+  blank.claim = [];
+  blank.summary = [];
+  blank.focus = { title: "", items: [] };
+  blank.closing = "";
+
+  blank.sections = (blank.sections || []).map((section) => {
+    const out = { id: section.id, title: section.title, type: section.type };
+    if (section.type === "experience") {
+      out.jobs = (section.jobs || []).map((job) => ({
+        company: "", place: "", dates: "", subrole: "", intro: "", meta: "", tag: "", bullets: [],
+        roles: (job.roles || []).map(() => ({ title: "", dates: "", bullets: [] }))
+      }));
+    } else if (section.type === "bullets") out.bullets = [];
+    else if (section.type === "groups") {
+      out.groups = (section.groups || []).map(() => ({ title: "", intro: "", bullets: [] }));
+    } else if (section.type === "certs") {
+      out.columns = (section.columns || [[], []]).map((column) =>
+        (column || []).map(() => ({ title: "", items: [] }))
+      );
+    } else if (section.type === "blocks") {
+      out.blocks = (section.blocks || []).map(() => ({ title: "", text: "", bullets: [] }));
+    } else if (section.type === "projects") {
+      out.intro = "";
+      out.columns = section.columns || 4;
+      out.items = (section.items || []).map(() => ({ name: "", url: "", desc: "" }));
+    }
+    return out;
+  });
+  return blank;
+}
+
+async function newBlankDraft() {
+  if (!state.model) return;
+  if (!confirm("¿Crear un borrador en blanco?\n\nSe vaciará el borrador activo, pero antes se guardará automáticamente una versión de seguridad. Las versiones guardadas y los PDF publicados no se eliminan.")) return;
+  try {
+    setStatus("Guardando copia de seguridad…");
+    await saveSafetySnapshot("blank");
+    state.model = blankModelFromCurrent(state.model);
+    await saveDraft({ silent: true });
+    state.dirty = false;
+    renderForm();
+    refreshPreview({ keepScroll: false });
+    setStatus("Borrador activo en blanco");
+    toast("Borrador activo vaciado. La copia anterior quedó guardada como versión.");
+  } catch (error) {
+    setStatus(`No se pudo crear el borrador en blanco: ${error.message}`);
+    alert(`No se pudo crear el borrador en blanco.\n\n${error.message}`);
   }
 }
 
@@ -97,10 +262,40 @@ async function publish() {
       body: JSON.stringify({ version, model: state.model })
     });
     setStatus(`Versión «${data.version}» guardada en el historial · ${formatDate(data.updatedAt)}`);
-    toast('Guardada. Para publicarla: "Exportar PDF" y súbelo en Documento.');
+    await loadContentVersions({ silent: true });
+    toast("Versión guardada. Puedes restaurarla cuando quieras desde el historial del editor.");
   } catch (error) {
     setStatus(`No se pudo guardar la versión: ${error.message}`);
     alert(`No se pudo guardar la versión.\n\n${error.message}`);
+  }
+}
+
+async function exportHtml() {
+  if (!state.model) return;
+  setStatus("Generando HTML…");
+  try {
+    await saveDraft({ silent: true });
+    const html = await api("/api/cv-content/render", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: state.model, mode: "preview" })
+    });
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const base = String(state.model.meta?.pdfFileName || "CV_Miguel_Angel_Carriazo.pdf")
+      .replace(/\.pdf$/i, "") || "CV_Miguel_Angel_Carriazo";
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `${base}.html`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setStatus("HTML exportado");
+    toast("HTML del borrador actual exportado. Puedes reimportarlo posteriormente.");
+  } catch (error) {
+    setStatus(`No se pudo exportar HTML: ${error.message}`);
+    toast(`No se pudo exportar HTML: ${error.message}`);
   }
 }
 
@@ -593,6 +788,7 @@ function sectionEditor(section, index) {
 
   if (section.type === "projects") {
     children.push(
+      field("Introducción", section.intro || "", (v) => (section.intro = v), { multiline: true }),
       field("Columnas (2-4)", String(section.columns), (v) => (section.columns = Number(v) || 4), { short: true })
     );
     section.items.forEach((item, itemIndex) =>
@@ -809,14 +1005,340 @@ function addButton(text, handler) {
   return button;
 }
 
+
+/* --------------------------------------------------------------- Import HTML --- */
+
+async function importHtmlFile(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return toast("El HTML supera el límite de 5 MB.");
+  if (!state.model) return toast("Espera a que termine de cargar el borrador.");
+  if (!confirm("¿Importar este HTML como nuevo borrador activo?\n\nCV Studio guardará automáticamente una copia del borrador actual antes de sustituirlo.")) return;
+
+  setStatus("Guardando copia de seguridad…");
+  try {
+    await saveSafetySnapshot("import");
+    setStatus("Importando HTML…");
+    const html = await file.text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    if (!doc?.body) throw new Error("No se pudo leer el HTML.");
+
+    let imported = null;
+    const structuredCount = doc.querySelectorAll("[data-cv-path]").length;
+    if (structuredCount >= 5) imported = importStructuredHtml(doc, state.model);
+    else imported = importLegacyHtml(doc, state.model);
+
+    if (!imported?.model || imported.recognized < 5) {
+      throw new Error("El HTML no parece corresponder a una plantilla compatible de CV Studio.");
+    }
+
+    state.model = imported.model;
+    state.dirty = true;
+    renderForm();
+    refreshPreview();
+    await saveDraft({ silent: true });
+    setStatus(`HTML importado · ${imported.recognized} campos recuperados · borrador anterior guardado`);
+    await loadContentVersions({ silent: true });
+    toast(`HTML importado correctamente (${imported.recognized} campos). El borrador anterior quedó guardado como versión.`);
+  } catch (error) {
+    setStatus(`No se pudo importar: ${error.message}`);
+    alert(`No se pudo importar el HTML.\n\n${error.message}`);
+  } finally {
+    const input = $("#cv-import-html-file");
+    if (input) input.value = "";
+  }
+}
+
+function importStructuredHtml(doc, currentModel) {
+  const model = deepClone(currentModel);
+  let recognized = 0;
+
+  for (const node of doc.querySelectorAll("[data-cv-path]")) {
+    const path = node.getAttribute("data-cv-path");
+    if (!path) continue;
+    const kind = node.getAttribute("data-cv-kind") || "text";
+    const value = kind === "list" ? readListNode(node) : richTextFromNode(node);
+    if ((Array.isArray(value) && value.length) || (!Array.isArray(value) && String(value).trim())) {
+      if (setPathValue(model, path, value)) recognized++;
+    }
+  }
+
+  recognized += importCommonHeader(doc, model);
+  return { model, recognized };
+}
+
+function importLegacyHtml(doc, currentModel) {
+  const model = deepClone(currentModel);
+  let recognized = importCommonHeader(doc, model);
+
+  const claim = doc.querySelector("#cv-preview-claim, .claim");
+  if (claim) {
+    const lines = Array.from(claim.querySelectorAll(".claim-line"));
+    const values = lines.length ? lines.map(richTextFromNode) : textLines(claim);
+    if (values.length) { model.claim = values; recognized++; }
+  }
+
+  const summary = Array.from(doc.querySelectorAll(".summary p")).filter((p) => !p.closest("section"));
+  if (summary.length) {
+    const closing = doc.querySelector("#cv-preview-closing");
+    model.summary = summary.filter((p) => p !== closing).map(richTextFromNode).filter(Boolean);
+    if (model.summary.length) recognized++;
+  }
+
+  const focus = doc.querySelector(".focus");
+  if (focus) {
+    const title = focus.querySelector(".t");
+    const items = Array.from(focus.querySelectorAll("li")).map(richTextFromNode).filter(Boolean);
+    if (title) { model.focus.title = richTextFromNode(title); recognized++; }
+    if (items.length) { model.focus.items = items; recognized++; }
+  }
+
+  const closing = doc.querySelector("#cv-preview-closing");
+  if (closing) { model.closing = richTextFromNode(closing); recognized++; }
+
+  const htmlSections = Array.from(doc.querySelectorAll("body > section"));
+  model.sections.forEach((sectionModel, index) => {
+    const sectionEl = htmlSections[index];
+    if (!sectionEl) return;
+    const title = sectionEl.querySelector("h2");
+    if (title) {
+      const clone = title.cloneNode(true);
+      clone.querySelector(".num")?.remove();
+      const t = richTextFromNode(clone);
+      if (t) { sectionModel.title = t; recognized++; }
+    }
+    recognized += importLegacySection(sectionEl, sectionModel);
+  });
+
+  const foot = doc.querySelector(".foot");
+  if (foot) { model.meta.footer = richTextFromNode(foot); recognized++; }
+  return { model, recognized };
+}
+
+function importCommonHeader(doc, model) {
+  let count = 0;
+  const name = doc.querySelector('[data-cv-path="meta.name"], #cv-preview-name, .head h1');
+  const role = doc.querySelector('[data-cv-path="meta.role"], #cv-preview-role, .head .role');
+  const contact = doc.querySelector(".head .contact, .contact");
+  const brandbar = doc.querySelector(".brandbar");
+
+  if (name) { model.meta.name = richTextFromNode(name); count++; }
+  if (role) { model.meta.role = richTextFromNode(role); count++; }
+  if (contact) {
+    const parts = Array.from(contact.childNodes)
+      .filter((n) => !(n.nodeType === 1 && n.classList?.contains("sep")))
+      .map((n) => n.nodeType === 3 ? n.textContent.trim() : richTextFromNode(n))
+      .filter(Boolean);
+    if (parts.length >= 2) { model.meta.contact = parts.map(stripBold); count++; }
+  }
+  if (brandbar) {
+    const tail = brandbar.querySelector("span");
+    if (tail) {
+      model.meta.brandTail = richTextFromNode(tail).replace(/^\s*[·•]\s*/, "");
+      const clone = brandbar.cloneNode(true);
+      clone.querySelector("span")?.remove();
+      model.meta.brandLead = richTextFromNode(clone);
+      count++;
+    }
+  }
+  return count;
+}
+
+function importLegacySection(sectionEl, sectionModel) {
+  let count = 0;
+  if (sectionModel.type === "bullets") {
+    const ul = Array.from(sectionEl.children).find((el) => el.tagName === "UL") || sectionEl.querySelector("ul");
+    const items = ul ? directListItems(ul) : [];
+    if (items.length) { sectionModel.bullets = items; count++; }
+  } else if (sectionModel.type === "experience") {
+    const jobs = Array.from(sectionEl.querySelectorAll(":scope > .job"));
+    sectionModel.jobs.forEach((jobModel, ji) => {
+      const jobEl = jobs[ji];
+      if (!jobEl) return;
+      const heads = Array.from(jobEl.querySelectorAll(":scope > .job-head"));
+      const mainHead = heads[0];
+      if (mainHead) {
+        const company = mainHead.querySelector(".company");
+        const dates = mainHead.querySelector(".dates");
+        const place = mainHead.querySelector(".jobtitle");
+        if (company) { jobModel.company = richTextFromNode(company); count++; }
+        if (dates) { jobModel.dates = richTextFromNode(dates); count++; }
+        if (place) { jobModel.place = richTextFromNode(place); count++; }
+      }
+      for (const key of ["subrole", "intro", "meta", "tag"]) {
+        const el = jobEl.querySelector(`:scope > .${key}`);
+        if (el) { jobModel[key] = richTextFromNode(el); count++; }
+      }
+      const directUls = Array.from(jobEl.children).filter((el) => el.tagName === "UL");
+      if (jobModel.bullets?.length !== undefined && directUls[0] && jobModel.roles.length === 0) {
+        jobModel.bullets = directListItems(directUls[0]); count++;
+      }
+      if (jobModel.roles.length) {
+        const roleHeads = heads.slice(1);
+        jobModel.roles.forEach((roleModel, ri) => {
+          const head = roleHeads[ri];
+          if (head) {
+            const title = head.querySelector(".jobtitle");
+            const dates = head.querySelector(".dates");
+            if (title) { roleModel.title = richTextFromNode(title); count++; }
+            if (dates) { roleModel.dates = richTextFromNode(dates); count++; }
+          }
+          const ul = directUls[ri];
+          if (ul) { roleModel.bullets = directListItems(ul); count++; }
+        });
+      }
+    });
+  } else if (sectionModel.type === "groups") {
+    const h3s = Array.from(sectionEl.querySelectorAll(":scope > h3"));
+    sectionModel.groups.forEach((group, gi) => {
+      const h3 = h3s[gi];
+      if (h3) { group.title = richTextFromNode(h3); count++; }
+      const candidates = h3 ? siblingsUntil(h3, "H3") : [];
+      const intro = candidates.find((el) => el.classList?.contains("intro"));
+      const ul = candidates.find((el) => el.tagName === "UL");
+      if (intro) { group.intro = richTextFromNode(intro); count++; }
+      if (ul) { group.bullets = directListItems(ul); count++; }
+    });
+  } else if (sectionModel.type === "certs") {
+    const cols = Array.from(sectionEl.querySelectorAll(".certcol"));
+    sectionModel.columns.forEach((groups, ci) => {
+      const groupEls = cols[ci] ? Array.from(cols[ci].querySelectorAll(".certgroup")) : [];
+      groups.forEach((group, gi) => {
+        const ge = groupEls[gi];
+        if (!ge) return;
+        const title = ge.querySelector(".t");
+        if (title) { group.title = richTextFromNode(title); count++; }
+        const lis = Array.from(ge.querySelectorAll(":scope > ul > li"));
+        group.items = lis.map((li) => ({
+          text: richTextWithoutNestedLists(li),
+          sub: Array.from(li.querySelectorAll(":scope > ul.sub > li")).map(richTextFromNode).filter(Boolean)
+        })).filter((x) => x.text);
+        if (group.items.length) count++;
+      });
+    });
+  } else if (sectionModel.type === "blocks") {
+    const blocks = Array.from(sectionEl.querySelectorAll(":scope > .skill"));
+    sectionModel.blocks.forEach((block, bi) => {
+      const el = blocks[bi]; if (!el) return;
+      const title = el.querySelector(":scope > .t");
+      const intro = el.querySelector(":scope > .intro");
+      const ul = el.querySelector(":scope > ul");
+      if (title) { block.title = richTextFromNode(title); count++; }
+      if (intro) { block.text = richTextFromNode(intro); count++; }
+      if (ul) { block.bullets = directListItems(ul); count++; }
+    });
+  } else if (sectionModel.type === "projects") {
+    // Texto introductorio de la sección (p.ej. la explicación de OpenTrust Group)
+    // Puede venir del HTML actual con .projects-intro/.intro o de plantillas anteriores
+    // como un párrafo situado entre el H2 y la tabla de proyectos.
+    const directChildren = Array.from(sectionEl.children);
+    const introEl = directChildren.find((el) =>
+      el !== sectionEl.querySelector("h2") &&
+      (el.classList?.contains("projects-intro") || el.classList?.contains("intro") || el.tagName === "P") &&
+      !el.closest?.(".proj")
+    );
+    if (introEl) {
+      const intro = richTextFromNode(introEl);
+      if (intro) { sectionModel.intro = intro; count++; }
+    }
+    const projects = Array.from(sectionEl.querySelectorAll(".proj"));
+    if (projects.length) {
+      sectionModel.items = projects.map((el) => ({
+        name: richTextFromNode(el.querySelector(".n")),
+        url: richTextFromNode(el.querySelector(".u")),
+        desc: richTextFromNode(el.querySelector(".d"))
+      })).filter((x) => x.name || x.url || x.desc);
+      count++;
+    }
+  }
+  return count;
+}
+
+function readListNode(node) {
+  if (node.tagName === "UL" || node.tagName === "OL") return directListItems(node);
+  const children = Array.from(node.children);
+  const lineNodes = children.filter((el) => el.matches("p, .claim-line, li"));
+  if (lineNodes.length) return lineNodes.map(richTextFromNode).filter(Boolean);
+  return textLines(node);
+}
+
+function directListItems(ul) {
+  return Array.from(ul.children)
+    .filter((el) => el.tagName === "LI")
+    .map(richTextWithoutNestedLists)
+    .filter(Boolean);
+}
+
+function richTextWithoutNestedLists(node) {
+  if (!node) return "";
+  const clone = node.cloneNode(true);
+  clone.querySelectorAll("ul,ol").forEach((el) => el.remove());
+  return richTextFromNode(clone);
+}
+
+function richTextFromNode(node) {
+  if (!node) return "";
+  const walk = (n) => {
+    if (n.nodeType === Node.TEXT_NODE) return n.textContent || "";
+    if (n.nodeType !== Node.ELEMENT_NODE) return "";
+    const inner = Array.from(n.childNodes).map(walk).join("");
+    if (n.tagName === "B" || n.tagName === "STRONG") return `**${inner.trim()}**`;
+    if (n.tagName === "BR") return "\n";
+    return inner;
+  };
+  return walk(node).replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+}
+
+function textLines(node) {
+  return richTextFromNode(node).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+}
+
+function stripBold(value) { return String(value || "").replace(/\*\*/g, "").trim(); }
+function deepClone(value) { return JSON.parse(JSON.stringify(value)); }
+
+function setPathValue(root, path, value) {
+  const parts = String(path).split(".").filter(Boolean);
+  if (!parts.length) return false;
+  let target = root;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = /^\d+$/.test(parts[i]) ? Number(parts[i]) : parts[i];
+    if (target == null || !(key in target)) return false;
+    target = target[key];
+  }
+  const last = /^\d+$/.test(parts.at(-1)) ? Number(parts.at(-1)) : parts.at(-1);
+  if (target == null || !(last in target)) return false;
+  target[last] = value;
+  return true;
+}
+
+function siblingsUntil(start, stopTag) {
+  const out = [];
+  let el = start.nextElementSibling;
+  while (el && el.tagName !== stopTag) { out.push(el); el = el.nextElementSibling; }
+  return out;
+}
+
 /* --------------------------------------------------------------- Toolbar --- */
 
 function bindToolbar() {
   $("#cv-save")?.addEventListener("click", () => saveDraft());
   $("#cv-reset")?.addEventListener("click", resetModel);
+  $("#cv-new-blank")?.addEventListener("click", newBlankDraft);
+  $("#cv-import-html")?.addEventListener("click", () => $("#cv-import-html-file")?.click());
+  $("#cv-import-html-file")?.addEventListener("change", (event) => importHtmlFile(event.target.files?.[0]));
+  $("#cv-export-html")?.addEventListener("click", exportHtml);
   $("#cv-publish")?.addEventListener("click", publish);
   $("#cv-publish-document")?.addEventListener("click", publishToDocument);
   $("#cv-export")?.addEventListener("click", exportPdf);
+  $("#cv-refresh-content-versions")?.addEventListener("click", () => loadContentVersions());
+  $("#cv-version-select")?.addEventListener("change", (event) => {
+    const hasSelection = !!event.target.value;
+    const restoreButton = $("#cv-restore-version");
+    const deleteButton = $("#cv-delete-version");
+    if (restoreButton) restoreButton.disabled = !hasSelection;
+    if (deleteButton) deleteButton.disabled = !hasSelection;
+  });
+  $("#cv-restore-version")?.addEventListener("click", restoreNamedVersion);
+  $("#cv-delete-version")?.addEventListener("click", deleteNamedVersion);
   $("#cv-bold")?.addEventListener("click", wrapSelectionBold);
   $("#cv-expand-all")?.addEventListener("click", () => toggleAll(true));
   $("#cv-collapse-all")?.addEventListener("click", () => toggleAll(false));

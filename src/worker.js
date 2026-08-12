@@ -10,6 +10,7 @@ import {
   publishDraft,
   listContentVersions,
   restoreContentVersion,
+  deleteContentVersion,
   purgeDownloadEvents
 } from "./cv-content.js";
 
@@ -90,6 +91,9 @@ export default {
 
       const restoreMatch = path.match(/^\/api\/cv-content\/versions\/(\d+)\/restore$/);
       if (restoreMatch && request.method === "POST") return await restoreContentVersion(env, Number(restoreMatch[1]));
+
+      const contentVersionDeleteMatch = path.match(/^\/api\/cv-content\/versions\/(\d+)$/);
+      if (contentVersionDeleteMatch && request.method === "DELETE") return await deleteContentVersion(env, Number(contentVersionDeleteMatch[1]));
 
       if (path === "/api/maintenance/purge" && request.method === "POST") return json(await purgeDownloadEvents(env));
 

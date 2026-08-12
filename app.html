@@ -196,6 +196,10 @@
             <button id="cv-expand-all" class="secondary" type="button">Desplegar</button>
             <button id="cv-collapse-all" class="secondary" type="button">Plegar</button>
             <button id="cv-reset" class="secondary" type="button">Restaurar original</button>
+            <button id="cv-new-blank" class="secondary" type="button" title="Vaciar el borrador activo conservando la estructura del editor">Nuevo borrador en blanco</button>
+            <button id="cv-import-html" class="secondary" type="button" title="Importar un CV desde HTML al editor">Importar HTML</button>
+            <input id="cv-import-html-file" type="file" accept="text/html,.html,.htm" hidden>
+            <button id="cv-export-html" class="secondary" type="button" title="Descargar el borrador actual como HTML reimportable">Exportar HTML</button>
             <button id="cv-export" class="secondary" type="button">Exportar PDF</button>
             <button id="cv-save" class="secondary" type="button">Guardar borrador</button>
             <button id="cv-publish" class="secondary" type="button">Guardar versión con nombre</button>
@@ -204,8 +208,21 @@
         </div>
 
         <div class="editor-guidance">
-          <strong>Formato</strong>
-          <span>Escribe **así** para poner una palabra en negrita, o selecciona el texto y pulsa <b>B</b>. También puedes hacer clic directamente sobre cualquier texto de la vista previa (a la derecha) y editarlo ahí mismo — al salir del campo, el panel de la izquierda se actualiza solo. Solo el contacto de la cabecera no es editable desde la vista previa; usa el panel para eso. El borrador se guarda solo cada pocos segundos. «Guardar versión con nombre» deja un punto en el historial de contenido. «Publicar en Documento» guarda la versión del contenido y te lleva al módulo Documento para gestionarla. «Exportar PDF» es la única acción que abre la ventana de impresión.</span>
+          <strong>Formato y versiones</strong>
+          <span>Existe un único borrador activo y, por separado, versiones guardadas. «Nuevo borrador en blanco» vacía el contenido del borrador activo conservando la estructura para poder importar y validar otro HTML. «Guardar versión con nombre» crea una copia congelada recuperable. «Importar HTML» guarda antes una copia de seguridad automática y después sustituye el borrador activo. «Exportar HTML» descarga exactamente el contenido que estás editando para conservarlo o reimportarlo.</span>
+        </div>
+
+        <div class="editor-guidance" id="cv-version-history-wrap">
+          <strong>Versiones guardadas</strong>
+          <span>Estas son copias guardadas, no borradores adicionales. Si las eliminas todas, el historial queda vacío; el borrador activo se conserva hasta que pulses «Nuevo borrador en blanco» o importes/restaures otro contenido.</span>
+          <div class="button-row" style="margin-top:10px;align-items:center;gap:8px;flex-wrap:wrap">
+            <select id="cv-version-select" class="secondary" style="min-width:280px;max-width:100%" aria-label="Versiones guardadas">
+              <option value="">Cargando versiones…</option>
+            </select>
+            <button id="cv-restore-version" class="secondary" type="button" disabled>Restaurar versión</button>
+            <button id="cv-delete-version" class="danger" type="button" disabled>Eliminar versión</button>
+            <button id="cv-refresh-content-versions" class="secondary" type="button">Actualizar historial</button>
+          </div>
         </div>
 
         <div class="cv-workspace">

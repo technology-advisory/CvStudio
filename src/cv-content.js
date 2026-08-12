@@ -121,6 +121,15 @@ export async function restoreContentVersion(env, id) {
   return json({ ok: true, model, updatedAt: now });
 }
 
+export async function deleteContentVersion(env, id) {
+  const versionId = Number(id);
+  if (!Number.isInteger(versionId) || versionId <= 0) return json({ error: "Versión no válida." }, 400);
+  const existing = await env.DB.prepare("SELECT id FROM cv_content_versions WHERE id = ?").bind(versionId).first();
+  if (!existing) return json({ error: "Versión no encontrada." }, 404);
+  const result = await env.DB.prepare("DELETE FROM cv_content_versions WHERE id = ?").bind(versionId).run();
+  return json({ ok: true, id: versionId, deleted: Number(result?.meta?.changes || 0) });
+}
+
 /** Purga de datos personales de descargas según política de retención. */
 export async function purgeDownloadEvents(env) {
   const days = Number(env.RETENTION_DAYS) || 90;

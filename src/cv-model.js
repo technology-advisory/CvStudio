@@ -419,6 +419,7 @@ function sanitizeSection(raw, index) {
       return { title: text(b.title, 140), text: text(b.text), bullets: list(b.bullets) };
     });
   } else if (type === "projects") {
+    section.intro = text(input.intro);
     const columns = Number(input.columns);
     section.columns = columns >= 2 && columns <= 4 ? Math.trunc(columns) : 4;
     section.items = (Array.isArray(input.items) ? input.items : []).slice(0, 24).map((item) => {
