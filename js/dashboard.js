@@ -399,7 +399,7 @@ async function purgeOldLinks(){
   if(!confirm(`¿Eliminar definitivamente los enlaces FINALIZADOS creados hace más de ${days} días? Los enlaces activos se conservarán. También se borrará su historial de descargas.`))return;
   try{const result=await api('/api/links/purge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({days})});state.selectedLinks.clear();if(Number(result.deleted||0)===0){toast(`No hay enlaces finalizados creados hace más de ${days} días`);}else{toast(`${result.deleted} enlace(s) eliminados`);}await Promise.all([loadLinks(),loadStatistics()]);}catch(e){toast(e.message);}
 }
-async function api(url,opts={}){const r=await fetch(url,{credentials:'same-origin',...opts});const d=await readResponse(r);if(!r.ok)throw new Error(d.error||`Error HTTP ${r.status}`);return d;}
+async function api(url,opts={}){const r=await fetch(url,opts);const d=await readResponse(r);if(!r.ok)throw new Error(d.error||`Error HTTP ${r.status}`);return d;}
 async function readResponse(response){
   const text=await response.text();
   if(!text)return {};
