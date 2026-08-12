@@ -10,7 +10,6 @@ import {
   publishDraft,
   listContentVersions,
   restoreContentVersion,
-  deleteContentVersion,
   purgeDownloadEvents
 } from "./cv-content.js";
 
@@ -91,9 +90,6 @@ export default {
 
       const restoreMatch = path.match(/^\/api\/cv-content\/versions\/(\d+)\/restore$/);
       if (restoreMatch && request.method === "POST") return await restoreContentVersion(env, Number(restoreMatch[1]));
-
-      const contentVersionDeleteMatch = path.match(/^\/api\/cv-content\/versions\/(\d+)$/);
-      if (contentVersionDeleteMatch && request.method === "DELETE") return await deleteContentVersion(env, Number(contentVersionDeleteMatch[1]));
 
       if (path === "/api/maintenance/purge" && request.method === "POST") return json(await purgeDownloadEvents(env));
 
@@ -441,7 +437,9 @@ async function createLinkRecord(body, env, origin) {
   const expiresAt = resolveExpiry(body);
   // 0 representa "sin límite por número de accesos". El enlace solo deja de ser válido
   // por caducidad o revocación manual. Así un scanner de correo no consume el enlace.
-  const maxDownloads = 0;
+  // Sentinel alto compatible con el CHECK histórico max_downloads >= 1.
+  // La lógica de consumeDownload NO consume el enlace: sigue válido hasta caducidad o revocación.
+  const maxDownloads = 2147483647;
   const token = randomToken(32);
   const tokenHash = await sha256Hex(new TextEncoder().encode(token));
   const tokenHint = `${token.slice(0, 5)}…${token.slice(-4)}`;
