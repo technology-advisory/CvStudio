@@ -176,12 +176,16 @@ function mailPayload(requireEmail=true){
   const selected=$('input[name="expiry"]:checked').value;
   const body={to:$('#recipient-email').value.trim(),recipientName:$('#recipient-name').value.trim(),subject:$('#mail-subject').value.trim(),message:$('#mail-message').value.trim()};
   if(requireEmail&&!body.to)throw new Error('Introduce la dirección de envío.');
+  const maxDownloads=Number($('#max-downloads').value);
+  if(!Number.isInteger(maxDownloads)||maxDownloads<1||maxDownloads>20)throw new Error('El número de descargas debe estar entre 1 y 20.');
+  body.maxDownloads=maxDownloads;
   if(selected==='custom'){if(!$('#custom-date').value)throw new Error('Selecciona fecha y hora.');body.expiresAt=new Date($('#custom-date').value).toISOString();}else body.minutes=Number(selected);
   return body;
 }
 
 function showGenerated(data){
-  $('#generated-url').value=data.url;$('#open-generated').href=data.url;$('#generated-expiry').textContent=`Válido hasta ${formatDate(data.expiresAt)} · accesos múltiples hasta caducidad o revocación`;$('#generated').classList.remove('hidden');
+  const maxDownloads=Math.max(1,Number(data.maxDownloads||1));
+  $('#generated-url').value=data.url;$('#open-generated').href=data.url;$('#generated-expiry').textContent=`Válido hasta ${formatDate(data.expiresAt)} · ${maxDownloads} ${maxDownloads===1?'descarga real disponible':'descargas reales disponibles'}; los accesos automáticos no las consumen`;$('#generated').classList.remove('hidden');
 }
 
 async function uploadCv(e){
@@ -346,7 +350,7 @@ function renderLinks(){
   $('#links-body').innerHTML=rows.length?rows.map(x=>`<tr>
     <td class="check-column"><input class="link-checkbox" type="checkbox" data-select-link="${x.id}" ${state.selectedLinks.has(Number(x.id))?'checked':''} aria-label="Seleccionar enlace ${escapeHtml(x.token_hint)}"></td>
     <td><strong>${escapeHtml(x.token_hint)}</strong><br><small>${escapeHtml(x.cv_version)}</small></td>
-    <td>${formatDate(x.created_at)}</td><td>${formatDate(x.expires_at)}</td><td>${Number(x.download_count||0)}</td>
+    <td>${formatDate(x.created_at)}</td><td>${formatDate(x.expires_at)}</td><td>${x.status==='USED'?0:Math.max(0,Number(x.max_downloads||1)-Number(x.download_count||0))}</td>
     <td><span class="pill ${x.status}">${label(x.status)}</span></td>
     <td class="link-actions">${x.status==='ACTIVE'?`<button class="secondary compact" data-revoke="${x.id}">Revocar</button>`:''}<button class="danger compact" data-delete-link="${x.id}">Eliminar</button></td>
   </tr>`).join(''):'<tr><td colspan="7" class="empty">No hay enlaces en este estado.</td></tr>';
@@ -395,7 +399,7 @@ async function purgeOldLinks(){
   if(!confirm(`¿Eliminar definitivamente los enlaces FINALIZADOS creados hace más de ${days} días? Los enlaces activos se conservarán. También se borrará su historial de descargas.`))return;
   try{const result=await api('/api/links/purge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({days})});state.selectedLinks.clear();if(Number(result.deleted||0)===0){toast(`No hay enlaces finalizados creados hace más de ${days} días`);}else{toast(`${result.deleted} enlace(s) eliminados`);}await Promise.all([loadLinks(),loadStatistics()]);}catch(e){toast(e.message);}
 }
-async function api(url,opts={}){const r=await fetch(url,opts);const d=await readResponse(r);if(!r.ok)throw new Error(d.error||`Error HTTP ${r.status}`);return d;}
+async function api(url,opts={}){const r=await fetch(url,{credentials:'same-origin',...opts});const d=await readResponse(r);if(!r.ok)throw new Error(d.error||`Error HTTP ${r.status}`);return d;}
 async function readResponse(response){
   const text=await response.text();
   if(!text)return {};

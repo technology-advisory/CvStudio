@@ -77,7 +77,11 @@
             <label><input type="radio" name="expiry" value="custom"><span>Personalizada</span></label>
           </fieldset>
           <label class="field custom-date hidden" id="custom-date-wrap">Fecha y hora de caducidad<input type="datetime-local" id="custom-date"></label>
-          <div class="privacy-warning"><strong>Acceso resistente a escáneres de correo</strong><span>El enlace permite 1 descarga real. Las comprobaciones automáticas de seguridad se registran, pero no consumen esa descarga.</span></div>
+          <label class="field">Número de descargas permitidas
+            <input id="max-downloads" type="number" min="1" max="20" step="1" value="1" inputmode="numeric" required>
+            <small>Entre 1 y 20 descargas reales. Los accesos automáticos detectados no consumen este límite.</small>
+          </label>
+          <div class="privacy-warning"><strong>Acceso resistente a escáneres de correo</strong><span>Las comprobaciones automáticas de seguridad se registran, pero no consumen las descargas reales que hayas permitido.</span></div>
           <div class="send-actions"><button class="secondary" id="preview-mail" type="button">Vista previa del correo</button><button class="primary" type="submit">Generar enlace y enviar</button></div>
         </form>
         <div id="generated" class="generated hidden" aria-live="polite">
@@ -116,7 +120,7 @@
           </div>
         </div>
         <p class="retention-note">La limpieza por antigüedad elimina cualquier enlace cuya fecha de creación supere el plazo seleccionado, incluidos los activos. Usa “Revocar todos los activos” si solo quieres invalidarlos sin borrarlos.</p>
-        <div class="table-wrap"><table><thead><tr><th class="check-column"></th><th>Token</th><th>Creado</th><th>Caduca</th><th>Accesos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="links-body"><tr><td colspan="7" class="empty">Cargando enlaces…</td></tr></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th class="check-column"></th><th>Token</th><th>Creado</th><th>Caduca</th><th>Descargas</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="links-body"><tr><td colspan="7" class="empty">Cargando enlaces…</td></tr></tbody></table></div>
       </article>
     </section>
 

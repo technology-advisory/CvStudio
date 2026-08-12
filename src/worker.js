@@ -431,7 +431,7 @@ async function createAndSend(request, env, origin) {
 async function previewMail(request, env, origin) {
   const body = await request.json().catch(() => ({}));
   const expiresAt = body.expiresAt ? new Date(body.expiresAt).toISOString() : resolveExpiry(body);
-  const maxDownloads = 1;
+  const maxDownloads = resolveMaxDownloads(body);
   const preview = buildEmailPreview(env, {
     recipientName: cleanOptionalText(body.recipientName, 80),
     subject: cleanOptionalText(body.subject, 160),
@@ -451,9 +451,10 @@ async function createLinkRecord(body, env, origin) {
   if (!current && !seeded) throw httpError("Sube primero un CV antes de generar enlaces.", 409);
 
   const expiresAt = resolveExpiry(body);
-  // Una descarga real permitida. Los accesos clasificados como automatizados
-  // se registran para trazabilidad, pero no consumen esta descarga.
-  const maxDownloads = 1;
+  // El propietario decide cuántas descargas reales permite (1..20).
+  // Los accesos clasificados como automatizados se registran para trazabilidad,
+  // pero no consumen este límite.
+  const maxDownloads = resolveMaxDownloads(body);
   const token = randomToken(32);
   const tokenHash = await sha256Hex(new TextEncoder().encode(token));
   const tokenHint = `${token.slice(0, 5)}…${token.slice(-4)}`;
@@ -469,6 +470,14 @@ async function createLinkRecord(body, env, origin) {
     .bind(tokenHash, tokenHint, cvVersionId, createdAt, expiresAt, maxDownloads, recipientEmail, recipientName, emailSubject).run();
 
   return { id: insert.meta.last_row_id, url: `${origin}/download/${token}`, tokenHint, createdAt, expiresAt, maxDownloads };
+}
+
+function resolveMaxDownloads(body) {
+  const value = Number(body.maxDownloads ?? 1);
+  if (!Number.isInteger(value) || value < 1 || value > 20) {
+    throw httpError("El número de descargas debe estar entre 1 y 20.", 400);
+  }
+  return value;
 }
 
 function resolveExpiry(body) {
