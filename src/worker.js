@@ -10,6 +10,7 @@ import {
   publishDraft,
   listContentVersions,
   restoreContentVersion,
+  deleteContentVersion,
   purgeDownloadEvents
 } from "./cv-content.js";
 
@@ -90,6 +91,9 @@ export default {
 
       const restoreMatch = path.match(/^\/api\/cv-content\/versions\/(\d+)\/restore$/);
       if (restoreMatch && request.method === "POST") return await restoreContentVersion(env, Number(restoreMatch[1]));
+
+      const contentVersionDeleteMatch = path.match(/^\/api\/cv-content\/versions\/(\d+)$/);
+      if (contentVersionDeleteMatch && request.method === "DELETE") return await deleteContentVersion(env, Number(contentVersionDeleteMatch[1]));
 
       if (path === "/api/maintenance/purge" && request.method === "POST") return json(await purgeDownloadEvents(env));
 
@@ -347,6 +351,18 @@ async function downloadCvVersion(env, id, inline) {
 
 
 function publicBaseUrl(env, fallbackOrigin) {
+  // En PRE/local el enlace del correo debe apuntar al mismo origen desde el que
+  // se está ejecutando CV Studio. En PRO usamos PUBLIC_BASE_URL.
+  try {
+    const fallback = new URL(fallbackOrigin);
+    const localHosts = new Set(["127.0.0.1", "localhost", "::1"]);
+    if (localHosts.has(fallback.hostname)) {
+      return fallback.origin.replace(/\/+$/, "");
+    }
+  } catch {
+    // Si el origen no fuese parseable, seguimos con la configuración habitual.
+  }
+
   const configured = String(env.PUBLIC_BASE_URL || "").trim();
   const base = configured || fallbackOrigin;
   return base.replace(/\/+$/, "");
@@ -415,7 +431,7 @@ async function createAndSend(request, env, origin) {
 async function previewMail(request, env, origin) {
   const body = await request.json().catch(() => ({}));
   const expiresAt = body.expiresAt ? new Date(body.expiresAt).toISOString() : resolveExpiry(body);
-  const maxDownloads = 0;
+  const maxDownloads = 1;
   const preview = buildEmailPreview(env, {
     recipientName: cleanOptionalText(body.recipientName, 80),
     subject: cleanOptionalText(body.subject, 160),
@@ -435,11 +451,9 @@ async function createLinkRecord(body, env, origin) {
   if (!current && !seeded) throw httpError("Sube primero un CV antes de generar enlaces.", 409);
 
   const expiresAt = resolveExpiry(body);
-  // 0 representa "sin límite por número de accesos". El enlace solo deja de ser válido
-  // por caducidad o revocación manual. Así un scanner de correo no consume el enlace.
-  // Sentinel alto compatible con el CHECK histórico max_downloads >= 1.
-  // La lógica de consumeDownload NO consume el enlace: sigue válido hasta caducidad o revocación.
-  const maxDownloads = 2147483647;
+  // Una descarga real permitida. Los accesos clasificados como automatizados
+  // se registran para trazabilidad, pero no consumen esta descarga.
+  const maxDownloads = 1;
   const token = randomToken(32);
   const tokenHash = await sha256Hex(new TextEncoder().encode(token));
   const tokenHint = `${token.slice(0, 5)}…${token.slice(-4)}`;
@@ -642,27 +656,56 @@ async function consumeDownload(request, env, token) {
     WHERE l.token_hash = ?`).bind(tokenHash).first();
 
   if (!row) return publicError("Enlace no válido", "El enlace no existe o ya no está disponible.", 404);
+
   const now = new Date();
-  if (row.status === "REVOKED") return publicError("Enlace revocado", "Este enlace ha sido invalidado por el propietario.", 410);
+  if (row.status === "REVOKED") {
+    return publicError("Enlace revocado", "Este enlace ha sido invalidado por el propietario.", 410);
+  }
   if (new Date(row.expires_at) <= now) {
     await env.DB.prepare("UPDATE download_links SET status = 'EXPIRED' WHERE id = ?").bind(row.id).run();
     return publicError("Enlace caducado", "La fecha de validez de este enlace ha finalizado.", 410);
   }
-  // Los accesos no consumen el enlace. Incluso un enlace legado marcado USED se
-  // mantiene disponible mientras no haya caducado ni haya sido revocado.
-  const object = await env.CV_BUCKET.get(row.r2_key);
-  if (!object) return publicError("Documento no disponible", "El CV asociado no se encuentra en el almacenamiento.", 404);
 
-  const newCount = Number(row.download_count || 0) + 1;
   const event = downloadMetadata(request);
+  const isAutomatic = event.classification === "POSSIBLE_AUTOMATION";
+  const currentCount = Number(row.download_count || 0);
+  const maxDownloads = Math.max(1, Number(row.max_downloads || 1));
+
+  // Un acceso humano/no determinado sí consume la descarga disponible.
+  // Un acceso con señales de scanner se registra, pero NO consume el enlace.
+  if (!isAutomatic && (row.status === "USED" || currentCount >= maxDownloads)) {
+    return publicError("Enlace utilizado", "Este enlace ya alcanzó su número máximo de descargas.", 410);
+  }
+
+  const object = await env.CV_BUCKET.get(row.r2_key);
+  if (!object) {
+    return publicError("Documento no disponible", "El CV asociado no se encuentra en el almacenamiento.", 404);
+  }
+
+  const nextCount = isAutomatic ? currentCount : currentCount + 1;
+  const nextStatus = !isAutomatic && nextCount >= maxDownloads ? "USED" : "ACTIVE";
+  const usedAt = !isAutomatic ? now.toISOString() : row.used_at;
+
   await env.DB.batch([
-    env.DB.prepare(`UPDATE download_links SET download_count = ?, status = 'ACTIVE', used_at = ? WHERE id = ?`)
-      .bind(newCount, now.toISOString(), row.id),
+    env.DB.prepare(`UPDATE download_links
+      SET download_count = ?, status = ?, used_at = ?
+      WHERE id = ?`)
+      .bind(nextCount, nextStatus, usedAt || null, row.id),
     env.DB.prepare(`INSERT INTO download_events
       (link_id, downloaded_at, ip_address, country, city, user_agent, asn, as_organization, classification, classification_reason)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(row.id, now.toISOString(), event.ipAddress, event.country, event.city, event.userAgent,
-        event.asn, event.asOrganization, event.classification, event.classificationReason)
+      .bind(
+        row.id,
+        now.toISOString(),
+        event.ipAddress,
+        event.country,
+        event.city,
+        event.userAgent,
+        event.asn,
+        event.asOrganization,
+        event.classification,
+        event.classificationReason
+      )
   ]);
 
   const headers = new Headers();

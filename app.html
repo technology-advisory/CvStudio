@@ -77,7 +77,7 @@
             <label><input type="radio" name="expiry" value="custom"><span>Personalizada</span></label>
           </fieldset>
           <label class="field custom-date hidden" id="custom-date-wrap">Fecha y hora de caducidad<input type="datetime-local" id="custom-date"></label>
-          <div class="privacy-warning"><strong>Acceso resistente a escáneres de correo</strong><span>El enlace permanece válido hasta su caducidad o revocación manual. Las comprobaciones automáticas de seguridad no lo consumen.</span></div>
+          <div class="privacy-warning"><strong>Acceso resistente a escáneres de correo</strong><span>El enlace permite 1 descarga real. Las comprobaciones automáticas de seguridad se registran, pero no consumen esa descarga.</span></div>
           <div class="send-actions"><button class="secondary" id="preview-mail" type="button">Vista previa del correo</button><button class="primary" type="submit">Generar enlace y enviar</button></div>
         </form>
         <div id="generated" class="generated hidden" aria-live="polite">
@@ -135,7 +135,7 @@
       </article>
 
       <article class="panel statistics-panel">
-        <div class="panel-heading"><div><p class="eyebrow">TRAZABILIDAD DE ACCESOS</p><h2>Accesos registrados</h2><p class="panel-description">Cada solicitud al enlace queda registrada sin consumirlo. La clasificación automática es orientativa y nunca bloquea una descarga.</p></div><button id="refresh-statistics-downloads" class="secondary" type="button">Actualizar</button></div>
+        <div class="panel-heading"><div><p class="eyebrow">TRAZABILIDAD DE ACCESOS</p><h2>Accesos registrados</h2><p class="panel-description">Cada solicitud al enlace queda registrada. Los accesos con señales de automatización no consumen la descarga disponible; la clasificación es orientativa.</p></div><button id="refresh-statistics-downloads" class="secondary" type="button">Actualizar</button></div>
         <div class="privacy-warning"><strong>Información personal y técnica</strong><span>Se registran fecha/hora, IP, ubicación aproximada, ASN/organización y navegador. Un acceso puede proceder del destinatario, de un proxy o de un sistema automático de seguridad.</span></div>
         <div class="links-toolbar">
           <div class="bulk-actions">
